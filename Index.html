@@ -1,0 +1,2828 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Cần Thủ Du Ký - Roguelike Câu Cá Việt Nam</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0b1612;
+            color: #e2e8f0;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            overflow-x: hidden;
+        }
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: #0f1f19; }
+        ::-webkit-scrollbar-thumb { background: #264d3e; border-radius: 4px; }
+
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.45); }
+            50% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+        }
+        .pulse-btn { animation: pulseGlow 2s infinite; }
+
+        @keyframes bobberFloat {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-5px) rotate(4deg); }
+        }
+        .bobber-anim { animation: bobberFloat 1.5s ease-in-out infinite; }
+
+        @keyframes shakeHard {
+            0%, 100% { transform: translate(0, 0); }
+            20% { transform: translate(-4px, 2px); }
+            40% { transform: translate(4px, -2px); }
+            60% { transform: translate(-3px, -2px); }
+            80% { transform: translate(3px, 2px); }
+        }
+        .shake-anim { animation: shakeHard 0.25s infinite; }
+
+        .btn-press:active:not(:disabled) { transform: scale(0.96); }
+        button { cursor: pointer; touch-action: manipulation; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-between bg-gradient-to-b from-[#0a1410] via-[#0e1d17] to-[#08100d]">
+
+    <!-- Khung App Mobile-First -->
+    <div id="app" class="w-full max-w-md min-h-screen flex flex-col bg-[#0f1e18] border-x border-emerald-950/80 shadow-2xl relative">
+
+        <!-- HEADER: Thời gian, Mùa, Kỳ Trăng, Thời tiết & Sinh tồn -->
+        <header class="bg-[#13261e]/95 backdrop-blur-md border-b border-emerald-900/60 px-3 py-2 sticky top-0 z-20 space-y-1.5">
+            <!-- Hàng 1: Thời gian, Mùa, Kỳ Trăng, Thời Tiết & Cài Đặt -->
+            <div class="flex items-center justify-between gap-1">
+                <div class="flex items-center gap-1 overflow-x-auto no-scrollbar">
+                    <span id="ui-day" class="bg-emerald-900/80 text-emerald-300 text-[10px] font-bold px-1.5 py-0.5 rounded border border-emerald-700/50 whitespace-nowrap">Ngày 1</span>
+                    <span id="ui-clock" class="text-[10px] font-mono font-bold bg-emerald-950 text-emerald-300 px-1.5 py-0.5 rounded border border-emerald-800/60 whitespace-nowrap">06:00</span>
+                    <span id="ui-season" class="bg-amber-900/60 text-amber-300 text-[10px] font-semibold px-1.5 py-0.5 rounded border border-amber-700/40 whitespace-nowrap">🌸 Xuân</span>
+                    <span id="ui-moon" class="bg-indigo-950/80 text-indigo-300 text-[10px] font-semibold px-1.5 py-0.5 rounded border border-indigo-700/40 whitespace-nowrap">🌑 Trăng Non</span>
+                </div>
+                <div class="flex items-center gap-1 shrink-0">
+                    <span id="ui-weather" class="text-[10px] font-medium bg-slate-800/90 px-1.5 py-0.5 rounded border border-slate-700 whitespace-nowrap">☀️ Nắng Đẹp</span>
+                    <button type="button" onclick="openModal('settings')" class="p-1 bg-slate-800 hover:bg-slate-700 rounded-lg text-xs border border-slate-700 btn-press" title="Nghỉ ngơi & Cài đặt">⚙️</button>
+                </div>
+            </div>
+
+            <!-- Hàng 2: Tiền, Danh Vọng, Phương Tiện & 2 Thanh Trạng Thái Gọn -->
+            <div class="grid grid-cols-12 gap-1.5 items-center bg-[#0a1510] px-2 py-1.5 rounded-xl border border-emerald-900/50">
+                <div class="col-span-4 truncate">
+                    <div class="text-[9px] text-slate-400 leading-none">💵 Tiền mặt</div>
+                    <div id="ui-money" class="text-[11px] font-bold text-emerald-400 truncate mt-0.5">0 đ</div>
+                </div>
+                <div class="col-span-3 border-x border-emerald-900/40 px-1.5 truncate">
+                    <div class="text-[9px] text-slate-400 leading-none">🏆 Danh vọng</div>
+                    <div id="ui-rep" class="text-[11px] font-bold text-amber-300 truncate mt-0.5">0</div>
+                </div>
+                <button type="button" onclick="openModal('map')" class="col-span-5 text-right truncate btn-press">
+                    <div id="ui-fuel-label" class="text-[9px] text-slate-400 leading-none">Phương tiện</div>
+                    <div id="ui-vehicle" class="text-[11px] font-bold text-sky-300 truncate mt-0.5">👣 Đi bộ</div>
+                </button>
+            </div>
+
+            <!-- Hàng 3: Thanh Thể Lực & Tinh Thần -->
+            <div class="grid grid-cols-2 gap-2">
+                <div>
+                    <div class="flex justify-between text-[10px] leading-none mb-1">
+                        <span class="text-amber-300 font-semibold">⚡ Thể lực</span>
+                        <span id="ui-stamina-text" class="text-slate-300 font-bold">100/100</span>
+                    </div>
+                    <div class="w-full h-1.5 bg-slate-900 rounded-full overflow-hidden border border-slate-800">
+                        <div id="ui-stamina-bar" class="h-full bg-gradient-to-r from-amber-500 to-yellow-400 transition-all duration-300" style="width: 100%"></div>
+                    </div>
+                </div>
+                <div>
+                    <div class="flex justify-between text-[10px] leading-none mb-1">
+                        <span class="text-cyan-300 font-semibold">🧠 Tinh thần</span>
+                        <span id="ui-sanity-text" class="text-slate-300 font-bold">100/100</span>
+                    </div>
+                    <div class="w-full h-1.5 bg-slate-900 rounded-full overflow-hidden border border-slate-800">
+                        <div id="ui-sanity-bar" class="h-full bg-gradient-to-r from-cyan-500 to-blue-400 transition-all duration-300" style="width: 100%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Thanh cảnh báo sinh tồn -->
+            <div id="ui-status-alerts" class="hidden flex flex-wrap gap-1 pt-0.5"></div>
+        </header>
+
+        <!-- THẺ ĐỊA DANH & TRANG BỊ HIỆN TẠI -->
+        <section class="p-3 bg-gradient-to-r from-[#142b22] to-[#10231b] border-b border-emerald-900/50">
+            <div class="flex items-start justify-between gap-2 mb-2">
+                <div class="min-w-0 flex-1">
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                        <span id="ui-loc-icon" class="text-lg">🏞️</span>
+                        <h1 id="ui-loc-name" class="font-bold text-sm text-white truncate">Kênh Bà Chiểu</h1>
+                    </div>
+                    <p id="ui-loc-desc" class="text-[11px] text-slate-400 line-clamp-1 mt-0.5">Con kênh nhỏ chảy qua xóm lao động, nước đục phù sa.</p>
+                </div>
+                <div class="flex items-center gap-1.5 shrink-0">
+                    <button id="btn-top-shop" type="button" onclick="openModal('shop')" class="hidden bg-amber-600/90 hover:bg-amber-500 text-slate-950 font-bold text-xs px-2.5 py-1.5 rounded-xl border border-amber-400 shadow btn-press">
+                        🏪 Chợ & Tiệm
+                    </button>
+                    <button type="button" onclick="openModal('map')" class="bg-emerald-800/80 hover:bg-emerald-700 text-emerald-100 font-semibold text-xs px-2.5 py-1.5 rounded-xl border border-emerald-600/50 shadow btn-press">
+                        🗺️ Đi nơi khác
+                    </button>
+                </div>
+            </div>
+
+            <!-- 3 Ô Trang Bị Nhanh: Cần câu, Dây & Lưỡi, Mồi câu -->
+            <div class="grid grid-cols-3 gap-1.5">
+                <button type="button" onclick="openModal('inventory')" class="bg-[#0b1712] hover:bg-[#10221b] p-2 rounded-xl border border-emerald-900/60 text-left btn-press">
+                    <div class="text-[9px] text-slate-400 uppercase">Cần câu</div>
+                    <div id="ui-eq-rod" class="text-[11px] font-bold text-amber-300 truncate">Tay Không</div>
+                </button>
+                <button type="button" onclick="openModal('inventory')" class="bg-[#0b1712] hover:bg-[#10221b] p-2 rounded-xl border border-emerald-900/60 text-left btn-press">
+                    <div class="text-[9px] text-slate-400 uppercase">Dây & Lưỡi</div>
+                    <div id="ui-eq-line" class="text-[11px] font-bold text-sky-300 truncate">Chưa có</div>
+                </button>
+                <button type="button" onclick="openModal('baitmix')" class="bg-[#0b1712] hover:bg-[#10221b] p-2 rounded-xl border border-emerald-900/60 text-left btn-press">
+                    <div class="text-[9px] text-slate-400 uppercase">Mồi câu</div>
+                    <div id="ui-eq-bait" class="text-[11px] font-bold text-emerald-300 truncate">Chưa gắn mồi</div>
+                </button>
+            </div>
+
+            <!-- Thanh trạng thái Cần Cắm Bờ (nếu đang cắm) -->
+            <div id="ui-setline-bar" class="hidden mt-2 bg-amber-950/60 border border-amber-700/50 rounded-xl px-2.5 py-1.5 flex items-center justify-between text-xs">
+                <span id="ui-setline-text" class="text-amber-200 font-medium">🎋 Đang cắm 1 cần cắm bờ...</span>
+                <button type="button" onclick="checkSetLines()" class="bg-amber-500 text-slate-950 font-bold px-2 py-0.5 rounded-lg text-[11px] btn-press">Thăm cần</button>
+            </div>
+        </section>
+
+        <!-- NHẬT KÝ HÀNH TRÌNH (TEXT-BASED LOG) -->
+        <main id="log-container" class="flex-1 overflow-y-auto p-3 space-y-2 max-h-[42vh] sm:max-h-[48vh]">
+            <!-- Các dòng log sẽ được chèn tại đây -->
+        </main>
+
+        <!-- SCENE 1: NGÂM CẦN CHỜ PHAO REAL-TIME -->
+        <section id="soaking-panel" class="hidden bg-[#12261e] border-t-2 border-cyan-500/70 p-3.5 space-y-3 shadow-2xl">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <span class="text-2xl bobber-anim inline-block">🏮</span>
+                    <div>
+                        <div class="text-xs font-bold text-cyan-300 uppercase tracking-wide">Đang Ngâm Cần Chờ Phao</div>
+                        <div id="soak-status-text" class="text-[11px] text-slate-300">Mặt nước lăn tăn, đang đợi cá vào ổ...</div>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <div class="text-[10px] text-slate-400">Tỷ lệ cắn / giây</div>
+                    <div id="soak-bite-rate" class="text-sm font-extrabold text-emerald-400">12%</div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2 text-center bg-[#0b1712] p-2 rounded-xl border border-emerald-900/50 text-[11px]">
+                <div>
+                    <span class="text-slate-400 block text-[9px]">Thời gian ngâm</span>
+                    <span id="soak-timer" class="font-bold text-amber-300">0s</span>
+                </div>
+                <div>
+                    <span class="text-slate-400 block text-[9px]">Độ tụ ổ mồi</span>
+                    <span id="soak-chum" class="font-bold text-emerald-300">0%</span>
+                </div>
+                <div>
+                    <span class="text-slate-400 block text-[9px]">Độ nhạy phao</span>
+                    <span id="soak-focus" class="font-bold text-cyan-300">100%</span>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2">
+                <button type="button" onclick="soakAction('chum')" class="bg-amber-700 hover:bg-amber-600 text-white font-bold py-2.5 px-2 rounded-xl text-xs btn-press">
+                    🥣 Đánh Xả Ổ
+                </button>
+                <button type="button" onclick="soakAction('twitch')" class="bg-cyan-700 hover:bg-cyan-600 text-white font-bold py-2.5 px-2 rounded-xl text-xs btn-press">
+                    🎣 Nhấp Cần Dụ
+                </button>
+                <button type="button" onclick="soakAction('cancel')" class="bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold py-2.5 px-2 rounded-xl text-xs btn-press">
+                    ↩️ Thu Cần
+                </button>
+            </div>
+        </section>
+
+        <!-- SCENE 2: ĐẤU CÁ REAL-TIME -->
+        <section id="fishing-combat-panel" class="hidden bg-[#191624] border-t-2 border-amber-500 p-3.5 space-y-3 shadow-2xl">
+            <div class="flex items-center justify-between">
+                <div>
+                    <span id="combat-fish-tag" class="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">Cá Đang Dính Câu!</span>
+                    <h3 id="combat-fish-title" class="text-sm font-extrabold text-white mt-1">Bóng cá lớn quẫy mạnh dưới đáy!</h3>
+                </div>
+                <div class="text-right">
+                    <div class="text-[10px] text-slate-400">Khoảng cách vào bờ</div>
+                    <div id="combat-dist-text" class="text-sm font-extrabold text-amber-300">15.0m</div>
+                </div>
+            </div>
+
+            <!-- Thanh Tiến Độ Kéo Cá -->
+            <div>
+                <div class="flex justify-between text-[10px] mb-1">
+                    <span class="text-emerald-300 font-bold">Tiến độ đưa vào vợt</span>
+                    <span id="combat-progress-pct" class="text-emerald-300 font-bold">35%</span>
+                </div>
+                <div class="w-full h-2.5 bg-slate-900 rounded-full overflow-hidden border border-slate-700">
+                    <div id="combat-progress-bar" class="h-full bg-gradient-to-r from-emerald-500 to-lime-400 transition-all duration-100" style="width: 35%"></div>
+                </div>
+            </div>
+
+            <!-- Thanh Độ Căng Dây -->
+            <div>
+                <div class="flex justify-between text-[10px] mb-1">
+                    <span class="text-rose-300 font-bold">Độ căng dây cước (Tránh quá đỏ hoặc tụt 0%)</span>
+                    <span id="combat-tension-pct" class="text-rose-300 font-bold">50%</span>
+                </div>
+                <div class="w-full h-3 bg-slate-900 rounded-full overflow-hidden border border-slate-700 relative">
+                    <div id="combat-tension-bar" class="h-full bg-gradient-to-r from-sky-400 via-amber-400 to-rose-600 transition-all duration-75" style="width: 50%"></div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2.5 pt-1">
+                <button type="button" onmousedown="setReeling(true)" onmouseup="setReeling(false)" onmouseleave="setReeling(false)" ontouchstart="setReeling(true)" ontouchend="setReeling(false)"
+                    class="bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-extrabold py-3.5 rounded-xl text-sm shadow-lg active:scale-95 select-none">
+                    ✊ GIỮ ĐỂ KÉO CẦN
+                </button>
+                <button type="button" onclick="useCombatSkill()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3.5 rounded-xl text-sm shadow-lg btn-press">
+                    🌊 Xả Cước Giảm Căng
+                </button>
+            </div>
+        </section>
+
+        <!-- SCENE 3: MINI-GAME THU THẬP (CHẶT CÂY / ĐÀO MỒI / LỤC RÁC) -->
+        <section id="minigame-panel" class="hidden fixed inset-x-0 bottom-20 mx-auto w-full max-w-md z-30 bg-[#13241c] border-2 border-emerald-500 rounded-t-3xl p-4 space-y-3 shadow-2xl">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 id="mg-title" class="text-sm font-extrabold text-emerald-300">🪓 Chặt Tre & Tìm Gỗ</h3>
+                    <p id="mg-desc" class="text-[11px] text-slate-300">Canh thanh trượt vào vùng xanh để chặt trúng thân già!</p>
+                </div>
+                <span id="mg-round" class="text-xs font-bold bg-emerald-950 text-emerald-300 px-2.5 py-1 rounded-lg border border-emerald-700/50">Lượt 1/3</span>
+            </div>
+
+            <div class="w-full h-6 bg-slate-900 rounded-xl overflow-hidden border border-slate-700 relative">
+                <div id="mg-zone" class="absolute top-0 bottom-0 bg-emerald-500/40 border-x-2 border-emerald-400" style="left: 35%; width: 30%;"></div>
+                <div id="mg-cursor" class="absolute top-0 bottom-0 w-1.5 bg-amber-300 shadow-[0_0_8px_#fcd34d]" style="left: 0%;"></div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2">
+                <button type="button" onclick="hitMinigame()" class="col-span-2 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold py-3 rounded-xl text-sm shadow btn-press">
+                    ⚡ RA TAY NGAY!
+                </button>
+                <button type="button" onclick="closeMinigame(true)" class="bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold py-3 rounded-xl text-xs btn-press">
+                    Dừng lại
+                </button>
+            </div>
+        </section>
+
+        <!-- FOOTER: THANH HÀNH ĐỘNG CHÍNH -->
+        <footer id="action-footer" class="bg-[#0d1a14] border-t border-emerald-900/60 p-2.5 space-y-2 sticky bottom-0 z-20">
+            <!-- 4 Hành động thực địa -->
+            <div class="grid grid-cols-4 gap-1.5">
+                <button type="button" onclick="startFishing()" class="bg-gradient-to-b from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white font-bold py-2.5 px-1 rounded-xl flex flex-col items-center justify-center shadow pulse-btn btn-press">
+                    <span class="text-lg leading-none mb-1">🎣</span>
+                    <span class="text-[11px]">Thả Câu</span>
+                </button>
+                <button type="button" onclick="startGather('wood')" class="bg-[#162d23] hover:bg-[#1c382c] text-emerald-100 font-semibold py-2.5 px-1 rounded-xl border border-emerald-800/60 flex flex-col items-center justify-center btn-press">
+                    <span class="text-lg leading-none mb-1">🪓</span>
+                    <span class="text-[11px]">Chặt Cây</span>
+                </button>
+                <button type="button" onclick="startGather('bait')" class="bg-[#162d23] hover:bg-[#1c382c] text-emerald-100 font-semibold py-2.5 px-1 rounded-xl border border-emerald-800/60 flex flex-col items-center justify-center btn-press">
+                    <span class="text-lg leading-none mb-1">🪱</span>
+                    <span class="text-[11px]">Tìm Mồi</span>
+                </button>
+                <button type="button" onclick="startGather('trash')" class="bg-[#162d23] hover:bg-[#1c382c] text-emerald-100 font-semibold py-2.5 px-1 rounded-xl border border-emerald-800/60 flex flex-col items-center justify-center btn-press">
+                    <span class="text-lg leading-none mb-1">🗑️</span>
+                    <span class="text-[11px]">Lục Rác</span>
+                </button>
+            </div>
+
+            <!-- 4 Menu Quản lý -->
+            <div class="grid grid-cols-4 gap-1.5">
+                <button type="button" onclick="openModal('craft')" class="bg-[#11221b] hover:bg-[#172e25] text-slate-200 font-semibold py-2 px-1 rounded-xl border border-slate-800 flex flex-col items-center justify-center btn-press">
+                    <span class="text-base leading-none mb-0.5">🔨</span>
+                    <span class="text-[10px]">Chế Tạo</span>
+                </button>
+                <button type="button" onclick="openModal('inventory')" class="bg-[#11221b] hover:bg-[#172e25] text-slate-200 font-semibold py-2 px-1 rounded-xl border border-slate-800 flex flex-col items-center justify-center btn-press">
+                    <span class="text-base leading-none mb-0.5">🎒</span>
+                    <span class="text-[10px]">Balo Đồ</span>
+                </button>
+                <button type="button" onclick="openModal('fishdex')" class="bg-[#11221b] hover:bg-[#172e25] text-slate-200 font-semibold py-2 px-1 rounded-xl border border-slate-800 flex flex-col items-center justify-center btn-press">
+                    <span class="text-base leading-none mb-0.5">📖</span>
+                    <span class="text-[10px]">Sổ Cá</span>
+                </button>
+                <button type="button" onclick="openModal('social')" class="bg-[#11221b] hover:bg-[#172e25] text-slate-200 font-semibold py-2 px-1 rounded-xl border border-slate-800 flex flex-col items-center justify-center btn-press">
+                    <span class="text-base leading-none mb-0.5">🤝</span>
+                    <span class="text-[10px]">Giang Hồ</span>
+                </button>
+            </div>
+        </footer>
+
+        <!-- MODAL ĐA NĂNG (Bản đồ, Chợ & Tiệm, Chế tạo, Balo, Trộn mồi, Sổ cá, Giang hồ, Cài đặt) -->
+        <div id="main-modal" class="hidden fixed inset-0 z-40 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
+            <div class="bg-[#11211b] border border-emerald-800/70 w-full max-w-md rounded-t-3xl sm:rounded-3xl max-h-[88vh] flex flex-col shadow-2xl overflow-hidden">
+                <div class="flex items-center justify-between px-4 py-3 bg-[#152921] border-b border-emerald-900/60">
+                    <h2 id="modal-title" class="font-extrabold text-sm text-emerald-300 uppercase tracking-wide">Tiêu đề</h2>
+                    <button type="button" onclick="closeModal()" class="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold flex items-center justify-center btn-press">✕</button>
+                </div>
+                <div id="modal-body" class="p-4 overflow-y-auto space-y-3 flex-1 text-xs">
+                    <!-- Nội dung modal động -->
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL SỰ KIỆN NGẪU NHIÊN -->
+        <div id="event-modal" class="hidden fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4">
+            <div class="bg-[#13251e] border-2 border-amber-500/70 w-full max-w-sm rounded-3xl p-5 shadow-2xl space-y-4">
+                <div class="flex items-center gap-3">
+                    <span id="ev-icon" class="text-4xl">👵</span>
+                    <div>
+                        <span id="ev-tag" class="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-amber-500/20 text-amber-300">Gặp gỡ bên đường</span>
+                        <h3 id="ev-title" class="text-base font-extrabold text-white mt-0.5">Dì Sáu Bán Vé Số</h3>
+                    </div>
+                </div>
+                <p id="ev-desc" class="text-xs text-slate-300 leading-relaxed">Mô tả sự kiện...</p>
+                <div id="ev-choices" class="space-y-2 pt-1">
+                    <!-- Các lựa chọn -->
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // ==========================================
+        // 1. MÙA, THỜI TIẾT, KỲ TRĂNG & PHƯƠNG TIỆN
+        // ==========================================
+        const SEASONS = [
+            { id: 'spring', name: 'Xuân', icon: '🌸' },
+            { id: 'summer', name: 'Hạ', icon: '☀️' },
+            { id: 'autumn', name: 'Thu', icon: '🍂' },
+            { id: 'winter', name: 'Đông', icon: '❄️' }
+        ];
+
+        const WEATHERS = [
+            { id: 'sunny', name: 'Nắng Đẹp', icon: '☀️', biteMod: 1.0 },
+            { id: 'cloudy', name: 'Râm Mát', icon: '⛅', biteMod: 1.2 },
+            { id: 'rain', name: 'Mưa Rào', icon: '🌧️', biteMod: 1.35 },
+            { id: 'storm', name: 'Giông Gió', icon: '⛈️', biteMod: 0.75 }
+        ];
+
+        function getMoonPhase(day) {
+            const d = ((day - 1) % 30) + 1;
+            if (d <= 4 || d >= 28) return { name: 'Trăng Non', icon: '🌑', nightBite: 1.35 };
+            if (d <= 11) return { name: 'Trăng Khuyết', icon: '🌒', nightBite: 1.15 };
+            if (d <= 18) return { name: 'Trăng Tròn', icon: '🌕', nightBite: 0.85 };
+            return { name: 'Trăng Hạ Tuần', icon: '🌗', nightBite: 1.1 };
+        }
+
+        const VEHICLES = [
+            { id: 'walk', name: 'Đi bộ', icon: '👣', price: 0, speedMult: 1.0, stamCostMult: 1.0, bagCap: 6, usesFuel: false, desc: 'Đi bộ chân đất, tốn sức và giỏ chứa ít cá.' },
+            { id: 'bicycle', name: 'Xe Đạp Thống Nhất', icon: '🚲', price: 350000, speedMult: 0.55, stamCostMult: 0.65, bagCap: 14, usesFuel: false, desc: 'Đạp xe nhẹ nhàng, gắn thêm được giỏ bội sau yên.' },
+            { id: 'cub50', name: 'Honda Cub 50 Cánh Én', icon: '🛵', price: 1800000, speedMult: 0.32, stamCostMult: 0.35, bagCap: 24, usesFuel: true, desc: 'Xe máy huyền thoại chở đồ câu chạy bon bon (Dùng xăng).' },
+            { id: 'wave_do', name: 'Wave Độ Chở Thùng Đá', icon: '🏍️', price: 4500000, speedMult: 0.2, stamCostMult: 0.2, bagCap: 40, usesFuel: true, desc: 'Chở thùng giữ nhiệt lớn đi săn hàng xuyên tỉnh (Dùng xăng).' },
+            { id: 'pickup', name: 'Xe Bán Tải Địa Hình', icon: '🛻', price: 18000000, speedMult: 0.12, stamCostMult: 0.1, bagCap: 70, usesFuel: true, desc: 'Chinh phục mọi đầm lầy hoang dã với khoang chứa khổng lồ.' }
+        ];
+
+        // ==========================================
+        // 2. BẢN ĐỒ 11 ĐỊA DANH SÔNG NƯỚC VIỆT NAM
+        // ==========================================
+        const LOCATIONS = {
+            kenh_ba_chieu: {
+                id: 'kenh_ba_chieu', name: 'Kênh Bà Chiểu', icon: '🏞️', x: 24, y: 22, dist: 1,
+                desc: 'Con kênh nhỏ chảy qua xóm lao động, nước đục phù sa, nhiều cá tạp và cá trê.',
+                canWood: false, canBait: true, canTrash: true,
+                services: ['grocery', 'pharmacy', 'lottery'],
+                fishPool: ['ca_long_tong', 'ca_bay_mau', 'ca_ro_phi', 'ca_tre_vang', 'ca_lau_kieng', 'ca_bui_nhui', 'oc_dang', 'cua_dong']
+            },
+            cho_ben_cu: {
+                id: 'cho_ben_cu', name: 'Chợ Bến Cũ & Tiệm Lão Bảy', icon: '🏪', x: 45, y: 18, dist: 2,
+                desc: 'Khu chợ ven bến sầm uất bậc nhất vùng: bán cá, mua đồ câu, ăn uống và bãi xe.',
+                canWood: false, canBait: true, canTrash: false,
+                services: ['sell', 'tackle', 'food', 'grocery', 'pharmacy', 'vehicle'],
+                fishPool: ['ca_long_tong', 'ca_ro_phi', 'ca_diec', 'ca_bong_cat', 'tom_dat', 'ca_chot_giay']
+            },
+            cau_sat_binh_loi: {
+                id: 'cau_sat_binh_loi', name: 'Chân Cầu Sắt Bình Lợi', icon: '🌉', x: 74, y: 26, dist: 4,
+                desc: 'Trụ cầu sắt cổ kính tạo dòng nước xoáy sâu, nơi trú ngụ của cá lăng, cá chốt và tôm càng.',
+                canWood: false, canBait: false, canTrash: true,
+                services: ['food', 'gas'],
+                fishPool: ['ca_chot_giay', 'ca_lang_nha', 'tom_cang_xanh', 'ca_bong_tuong', 'ca_tra_soc', 'ca_he_vang', 'ca_chay']
+            },
+            bo_ke_thanh_da: {
+                id: 'bo_ke_thanh_da', name: 'Bờ Kè Thanh Đa', icon: '🧱', x: 78, y: 50, dist: 5,
+                desc: 'Bờ kè đá hun hút gió mát, đông anh em cần thủ ngồi câu đài và uống nước mía.',
+                canWood: false, canBait: false, canTrash: false,
+                services: ['grocery', 'juice', 'lottery'],
+                fishPool: ['ca_chep_dong', 'ca_me_vinh', 'ca_ro_hu', 'ca_tra_soc', 'tom_cang_xanh', 'ca_doi_muc', 'ca_huong']
+            },
+            cong_dap_ong_lon: {
+                id: 'cong_dap_ong_lon', name: 'Cống Đập Ông Lớn', icon: '🌊', x: 55, y: 38, dist: 3,
+                desc: 'Nơi giao thoa con nước lớn ròng, bọt tung trắng xóa thu hút cá săn mồi.',
+                canWood: false, canBait: false, canTrash: true,
+                services: [],
+                fishPool: ['ca_chem', 'ca_chot_giay', 'ca_ngat', 'ca_thoi_loi', 'tom_su', 'ca_bong_dua', 'ca_doi_muc']
+            },
+            canh_dong_co: {
+                id: 'canh_dong_co', name: 'Cánh Đồng Cỏ Hoang', icon: '🌾', x: 16, y: 45, dist: 3,
+                desc: 'Bãi cỏ lau mênh mông đầy châu chấu, dế mèn và những mương nước tự nhiên.',
+                canWood: false, canBait: true, canTrash: false,
+                services: ['juice'],
+                fishPool: ['ca_loc_dong', 'ca_ro_dong', 'ca_sac_ran', 'ca_that_lat', 'cua_dong', 'ca_trach_lau']
+            },
+            ruong_lua: {
+                id: 'ruong_lua', name: 'Ruộng Lúa & Vườn Trái Cây', icon: '🥭', x: 34, y: 52, dist: 4,
+                desc: 'Cánh đồng lúa trĩu hạt nhiều giun ốc, kề bên vườn trái cây Nam Bộ sum suê.',
+                canWood: false, canBait: true, canTrash: false,
+                services: ['orchard'],
+                fishPool: ['ca_ro_dong', 'ca_loc_dong', 'ca_tre_trang', 'ca_sac_buom', 'cua_dong', 'ca_bui_nhui']
+            },
+            ho_lao_tu: {
+                id: 'ho_lao_tu', name: 'Hồ Dịch Vụ Lão Tư', icon: '🎣', x: 52, y: 68, dist: 6,
+                desc: 'Hồ câu giải trí thả toàn hàng khủng: tra dầu, trắm đen, chép giòn và hải tượng.',
+                canWood: false, canBait: false, canTrash: false,
+                services: ['sell', 'food'],
+                fishPool: ['ca_tra_dau', 'ca_tram_den', 'ca_chep_gion', 'ca_chim_trang', 'ca_tai_tuong', 'ca_chép_koi', 'ca_ho_khong_lo']
+            },
+            nga_ba_phu_my: {
+                id: 'nga_ba_phu_my', name: 'Ngã Ba Sông Phú Mỹ', icon: '⚓', x: 82, y: 78, dist: 8,
+                desc: 'Ngã ba sông rộng lớn tàu bè qua lại, nước sâu chảy xiết ẩn chứa thủy quái đáy sông.',
+                canWood: false, canBait: false, canTrash: true,
+                services: ['gas'],
+                fishPool: ['ca_lang_duoi_do', 'ca_bong_lau', 'ca_dua', 'ca_vo_co', 'ca_nheo_song', 'tom_cang_lua', 'ca_chinh_bong']
+            },
+            rung_tre: {
+                id: 'rung_tre', name: 'Rừng Tre & Tràm Cổ Thụ', icon: '🎋', x: 16, y: 74, dist: 6,
+                desc: 'Rừng tre trúc xanh rì rào, nguồn nguyên liệu làm cần câu tuyệt hảo và nhiều ổ kiến vàng.',
+                canWood: true, canBait: true, canTrash: false,
+                services: [],
+                fishPool: ['ca_loc_bong', 'ca_tre_rung', 'ca_ro_dong', 'ca_trach_lau', 'ca_keo']
+            },
+            dam_lay_rung_sac: {
+                id: 'dam_lay_rung_sac', name: 'Đầm Lầy Rừng Sác', icon: '🐊', x: 46, y: 88, dist: 9,
+                desc: 'Vùng rừng ngập mặn hoang sơ hiểm trở, nơi cư ngụ của các loài cá nước lợ quý hiếm.',
+                canWood: true, canBait: true, canTrash: true,
+                services: [],
+                fishPool: ['ca_mu_nghe', 'ca_chem', 'ca_ngat', 'ca_thoi_loi', 'ca_keo', 'tom_tich', 'ca_duoi_bong']
+            }
+        };
+
+        // ==========================================
+        // 3. KHO VẬT PHẨM, NGUYÊN LIỆU, MỒI & ĐỒ DÙNG
+        // ==========================================
+        const ITEMS = {
+            // Gỗ & Cây
+            tre_gia: { id: 'tre_gia', name: 'Tre Già Vót Thẳng', type: 'mat', icon: '🎋', desc: 'Thân tre già dẻo dai, nguyên liệu cơ bản làm cần tay.' },
+            truc_vang: { id: 'truc_vang', name: 'Trúc Vàng Đốt Đều', type: 'mat', icon: '🎍', desc: 'Trúc quý nhẹ và nảy, chuyên dùng làm cần đài & cần tôm.' },
+            go_tam_vong: { id: 'go_tam_vong', name: 'Gốc Tầm Vông Đặc', type: 'mat', icon: '🪵', desc: 'Cứng như thép, chịu lực kéo cá khủng cực tốt.' },
+            nhanh_tram: { id: 'nhanh_tram', name: 'Nhánh Tràm Rừng', type: 'mat', icon: '🌿', desc: 'Cành tràm thẳng dùng làm cần cắm bờ.' },
+            cui_kho: { id: 'cui_kho', name: 'Củi Khô & Gỗ Vụn', type: 'mat', icon: '🪵', desc: 'Dùng nhóm lửa trại ban đêm hoặc nấu ăn.' },
+            // Rác tái chế
+            xop_trang: { id: 'xop_trang', name: 'Miếng Xốp Trắng', type: 'mat', icon: '⬜', desc: 'Gọt làm phao câu nổi trên mặt nước.' },
+            day_kem: { id: 'day_kem', name: 'Dây Kẽm & Dù Cũ', type: 'mat', icon: '➰', desc: 'Uốn khoen cần và bện dây câu.' },
+            nap_chai: { id: 'nap_chai', name: 'Nắp Chai & Chì Vụn', type: 'mat', icon: '🪙', desc: 'Tán làm chì neo giữ phao đứng thẳng.' },
+            tam_bat: { id: 'tam_bat', name: 'Tấm Bạt Nilon Lớn', type: 'mat', icon: '⛺', desc: 'Dùng chế dù che mưa nắng hoặc dựng lều bạt.' },
+            // Cần câu
+            can_tre_tho: { id: 'can_tre_tho', name: 'Cần Tre Tự Vót', type: 'rod', icon: '🎋', power: 22, luck: 8, desc: 'Cần tre mộc mạc đủ sức giật cá đồng nhỏ (Lực: 22).' },
+            can_cau_tom: { id: 'can_cau_tom', name: 'Cần Câu Tôm Đầu Dẻo', type: 'rod', icon: '🦐', power: 26, luck: 18, shrimpBonus: true, desc: 'Ngọn trúc mảnh siêu nhạy chuyên câu tôm càng (Lực: 26, Chuyên tôm).' },
+            can_truc_dai: { id: 'can_truc_dai', name: 'Cần Trúc Câu Đài', type: 'rod', icon: '🎍', power: 42, luck: 20, desc: 'Cần trúc uốn lửa cân đối, giật cá rất nảy (Lực: 42).' },
+            can_tam_vong: { id: 'can_tam_vong', name: 'Cần Tầm Vông Săn Hàng', type: 'rod', icon: '🪵', power: 68, luck: 22, desc: 'Cần tầm vông dày dặn chuyên trị cá lớn (Lực: 68).' },
+            can_carbon: { id: 'can_carbon', name: 'Cần Carbon Đại Lục 6H', type: 'rod', icon: '🎣', power: 95, luck: 35, desc: 'Cần carbon siêu nhẹ siêu tải chuyên săn thủy quái (Lực: 95).' },
+            // Dây & Lưỡi
+            day_du_cu: { id: 'day_du_cu', name: 'Dây Dù Bện & Phao Xốp', type: 'line', icon: '🪝', strength: 24, sensitivity: 10, desc: 'Bộ thẻo tự chế cơ bản (Chịu tải: 24).' },
+            luoi_tom_nho: { id: 'luoi_tom_nho', name: 'Thẻo Lưỡi Tôm Ngạnh Nhỏ', type: 'line', icon: '🦐', strength: 32, sensitivity: 28, shrimpBonus: true, desc: 'Lưỡi nhỏ sắc bén chuyên ôm càng tôm (Chịu tải: 32, Chuyên tôm).' },
+            cuoc_nylon: { id: 'cuoc_nylon', name: 'Cước Trắng Thái Lan', type: 'line', icon: '🧵', strength: 52, sensitivity: 22, desc: 'Cước trong suốt ít bị cá nhát phát hiện (Chịu tải: 52).' },
+            day_pe_xin: { id: 'day_pe_xin', name: 'Dây Dù PE 8 Lõi & Phao Nano', type: 'line', icon: '🧬', strength: 92, sensitivity: 34, desc: 'Bộ dây thẻo đỉnh cao không ngại cá khủng (Chịu tải: 92).' },
+            // Mồi câu (Chỉ số Tanh - Thơm - Thúi)
+            giun_dat: { id: 'giun_dat', name: 'Giun Đất Đỏ', type: 'bait', icon: '🪱', tanh: 65, them: 15, thui: 10, desc: 'Mồi quốc dân nhạy mọi loại cá (Tanh 65 / Thơm 15 / Thúi 10).' },
+            oc_buou: { id: 'oc_buou', name: 'Ốc Bươu Đập Dập', type: 'bait', icon: '🐌', tanh: 75, them: 10, thui: 25, desc: 'Khoái khẩu của cá trắm đen, cá chép và cá lăng (Tanh 75 / Thơm 10 / Thúi 25).' },
+            de_men: { id: 'de_men', name: 'Dế Mèn Cánh Nâu', type: 'bait', icon: '🦗', tanh: 45, them: 35, thui: 5, desc: 'Mồi sống giãy mạnh dụ cá lóc, cá rô (Tanh 45 / Thơm 35 / Thúi 5).' },
+            chau_chau: { id: 'chau_chau', name: 'Châu Chấu Cỏ Xanh', type: 'bait', icon: '🦗', tanh: 40, them: 45, thui: 0, desc: 'Mồi nổi cực nhạy cá săn mồi tầng mặt (Tanh 40 / Thơm 45 / Thúi 0).' },
+            trung_kien: { id: 'trung_kien', name: 'Trứng Kiến Vàng', type: 'bait', icon: '🥚', tanh: 50, them: 60, thui: 0, desc: 'Mồi thượng hạng câu cá dảnh, cá he, cá mè vinh (Tanh 50 / Thơm 60 / Thúi 0).' },
+            tom_vun: { id: 'tom_vun', name: 'Tôm Vụn Bóc Vỏ', type: 'bait', icon: '🦐', tanh: 85, them: 20, thui: 15, desc: 'Mùi tanh tươi tự nhiên dụ cá ngát, cá chẽm (Tanh 85 / Thơm 20 / Thúi 15).' },
+            trun_chi: { id: 'trun_chi', name: 'Trùn Chỉ Đỏ Tươi', type: 'bait', icon: '🪱', tanh: 70, them: 25, thui: 10, desc: 'Mồi câu tôm càng xanh và cá bống cực nhạy (Tanh 70 / Thơm 25 / Thúi 10).' },
+            tim_gan_bam: { id: 'tim_gan_bam', name: 'Tim Gan Băm Nhuyễn', type: 'bait', icon: '🥩', tanh: 90, them: 15, thui: 20, desc: 'Mồi chuyên dụng dụ tôm càng sông cái (Tanh 90 / Thơm 15 / Thúi 20).' },
+            cam_gao: { id: 'cam_gao', name: 'Cám Gạo Rang Thơm', type: 'bait', icon: '🌾', tanh: 10, them: 85, thui: 0, desc: 'Dùng câu đài cá chép, cá trôi hoặc đánh xả ổ (Tanh 10 / Thơm 85 / Thúi 0).' },
+            bap_u_chua: { id: 'bap_u_chua', name: 'Bắp Non Ủ Chua Ngọt', type: 'bait', icon: '🌽', tanh: 5, them: 90, thui: 15, desc: 'Chuyên trị cá trắm, cá chép khủng nhát mồi (Tanh 5 / Thơm 90 / Thúi 15).' },
+            trung_vit_thoi: { id: 'trung_vit_thoi', name: 'Trứng Vịt Lộn Ủ Thối', type: 'bait', icon: '🥚', tanh: 50, them: 10, thui: 90, desc: 'Mùi thúi nồng nặc chuyên dụ cá tra, cá trê khủng (Tanh 50 / Thơm 10 / Thúi 90).' },
+            mam_tom_u: { id: 'mam_tom_u', name: 'Mắm Tôm Bắc Ủ Đặc', type: 'bait', icon: '🫙', tanh: 70, them: 5, thui: 95, desc: 'Vũ khí hạng nặng săn cá nheo, cá lăng đuôi đỏ (Tanh 70 / Thơm 5 / Thúi 95).' },
+            ca_sinh_bam: { id: 'ca_sinh_bam', name: 'Ruột Cá Sình Lên Men', type: 'bait', icon: '🐟', tanh: 80, them: 0, thui: 85, desc: 'Nhặt ngoài chợ/bãi rác, cực kỳ hút cá da trơn (Tanh 80 / Thơm 0 / Thúi 85).' },
+            moi_bi_truyen: { id: 'moi_bi_truyen', name: 'Mồi Cốt Thần Sầu', type: 'bait', icon: '✨', tanh: 75, them: 75, thui: 65, desc: 'Bài mồi bí truyền dung hòa hoàn hảo Tanh - Thơm - Thúi.' },
+            moi_tu_tron: { id: 'moi_tu_tron', name: 'Mồi Tự Phối', type: 'bait', icon: '🥣', tanh: 50, them: 50, thui: 50, desc: 'Bài mồi do chính tay bạn nhồi trộn.' },
+            // Dụng cụ sinh tồn & Tạp hóa
+            can_cam_bo: { id: 'can_cam_bo', name: 'Bộ Cần Cắm Bờ', type: 'gear', icon: '🚩', desc: 'Cắm dọc bờ rạch để tự động bắt cá sau mỗi 2 tiếng.' },
+            du_bat_tre: { id: 'du_bat_tre', name: 'Dù Bạt Tre Tự Chế', type: 'gear', icon: '☂️', desc: 'Che nắng gắt và mưa rào khi ngồi câu ngoài bãi trống.' },
+            du_cau_dai: { id: 'du_cau_dai', name: 'Dù Câu Đài 2 Tầng', type: 'gear', icon: '⛱️', desc: 'Dù chuyên dụng chống tia UV và mưa giông.' },
+            leu_bat: { id: 'leu_bat', name: 'Lều Bạt Câu Đêm', type: 'gear', icon: '⛺', desc: 'Chống sương đêm lạnh giá và ngăn muỗi đốt khi cắm trại.' },
+            danh_lua_tho: { id: 'danh_lua_tho', name: 'Dụng Cụ Đánh Lửa Kẽm', type: 'gear', icon: ' sparks', desc: 'Tạo tia lửa nhóm bếp củi khi hết hộp quẹt.' },
+            bam_mong_tay: { id: 'bam_mong_tay', name: 'Bấm Móng Tay Inox', type: 'gear', icon: '✂️', desc: 'Tỉa đầu dây cước gọn gàng, tăng +3% độ nhạy phao.' },
+            hop_quet: { id: 'hop_quet', name: 'Hộp Quẹt Gas', type: 'gear', icon: '🔥', price: 5000, desc: 'Dùng châm thuốc lá và nhóm lửa trại ban đêm.' },
+            // Tiêu hao
+            thuoc_la: { id: 'thuoc_la', name: 'Gói Thuốc Lá Ba Số', type: 'consumable', icon: '🚬', price: 25000, desc: 'Cần có hộp quẹt. Rít một hơi tăng +18 Tinh thần (-3 Thể lực).' },
+            mi_tom: { id: 'mi_tom', name: 'Gói Mì Tôm Hảo Hảo', type: 'consumable', icon: '🍜', price: 6000, desc: 'Ăn sống chống đói (+22 Thể lực, +5 Tinh thần).' },
+            xi_tin: { id: 'xi_tin', name: 'Chai Nước Tăng Lực Xì Tin', type: 'consumable', icon: '🥤', price: 12000, desc: 'Ngọt lịm tỉnh táo (+18 Thể lực, +12 Tinh thần).' },
+            number_one: { id: 'number_one', name: 'Chai Number One', type: 'consumable', icon: '⚡', price: 12000, desc: 'Bù năng lượng tức thì (+25 Thể lực, +6 Tinh thần).' },
+            tra_247: { id: 'tra_247', name: 'Chai Trà Xanh 2-4-7', type: 'consumable', icon: '🍵', price: 12000, desc: 'Giải nhiệt thanh mát (+14 Thể lực, +15 Tinh thần).' },
+            thuoc_ha_sot: { id: 'thuoc_ha_sot', name: 'Thuốc Hạ Sốt & Giải Cảm', type: 'consumable', icon: '💊', price: 25000, desc: 'Chữa khỏi bệnh Sốt Xuất Huyết và hồi +20 Thể lực.' },
+            dau_gio_xanh: { id: 'dau_gio_xanh', name: 'Chai Dầu Gió Xanh', type: 'consumable', icon: '🧴', price: 22000, desc: 'Giữ ấm cơ thể, xua muỗi 6 tiếng và +10 Tinh thần.' },
+            kem_chong_muoi: { id: 'kem_chong_muoi', name: 'Kem Xua Muỗi Soffell', type: 'consumable', icon: '🦟', price: 28000, desc: 'Bảo vệ khỏi muỗi đốt sốt xuất huyết suốt 8 tiếng.' },
+            vitamin_b1: { id: 'vitamin_b1', name: 'Vỉ Vitamin B1 Hồi Sức', type: 'consumable', icon: '🧪', price: 20000, desc: 'Giảm mệt mỏi thức đêm (+35 Thể lực).' },
+            can_xang_le: { id: 'can_xang_le', name: 'Chai Xăng Lẻ Dự Phòng', type: 'consumable', icon: '⛽', price: 35000, desc: 'Đổ thêm +45% xăng cho xe máy/bán tải.' },
+            trai_cay_vuon: { id: 'trai_cay_vuon', name: 'Túi Trái Cây Vườn Tươi', type: 'consumable', icon: '🥭', price: 25000, desc: 'Xoài cát, mận đỏ ngọt mát (+20 Thể lực, +14 Tinh thần).' },
+            chao_ca_bi_truyen: { id: 'chao_ca_bi_truyen', name: 'Nồi Cháo Cá Lóc Rau Đắng', type: 'consumable', icon: '🍲', price: 0, desc: 'Món ăn gia truyền giải cảm dứt sốt (+65 Thể lực, +40 Tinh thần).' }
+        };
+
+        // ==========================================
+        // 4. CƠ SỞ DỮ LIỆU 85+ LOÀI THỦY SẢN
+        // ==========================================
+        const FISH_DB = (() => {
+            const core = [
+                // Sinh vật phá mồi
+                { id: 'ca_long_tong', name: 'Cá Lòng Tong Đá', icon: '🐟', rarity: 'Phá mồi', isPest: true, minW: 0.02, maxW: 0.08, diff: 6, basePrice: 2000, prefTanh: 40, prefThem: 75, prefThui: 0, activeTime: 'day', prefWeather: 'sunny' },
+                { id: 'ca_bay_mau', name: 'Cá Bảy Màu Hoang', icon: '🐠', rarity: 'Phá mồi', isPest: true, minW: 0.01, maxW: 0.04, diff: 5, basePrice: 1500, prefTanh: 30, prefThem: 80, prefThui: 0, activeTime: 'day', prefWeather: 'sunny' },
+                { id: 'cua_dong', name: 'Cua Đồng Kẹp Mồi', icon: '🦀', rarity: 'Phá mồi', isPest: true, minW: 0.05, maxW: 0.2, diff: 12, basePrice: 5000, prefTanh: 85, prefThem: 10, prefThui: 60, activeTime: 'any', prefWeather: 'rain' },
+                { id: 'ca_bui_nhui', name: 'Cá Bùi Nhùi Rỉa Mồi', icon: '🐡', rarity: 'Phá mồi', isPest: true, minW: 0.03, maxW: 0.1, diff: 8, basePrice: 2000, prefTanh: 60, prefThem: 50, prefThui: 20, activeTime: 'any', prefWeather: 'cloudy' },
+                { id: 'ca_lau_kieng', name: 'Cá Lau Kiếng', icon: '🦈', rarity: 'Phá mồi', isPest: true, minW: 0.3, maxW: 1.5, diff: 28, basePrice: 3000, prefTanh: 40, prefThem: 40, prefThui: 70, activeTime: 'any', prefWeather: 'sunny' },
+                { id: 'oc_dang', name: 'Ốc Đắng Bám Lưỡi', icon: '🐌', rarity: 'Phá mồi', isPest: true, minW: 0.02, maxW: 0.05, diff: 4, basePrice: 1000, prefTanh: 50, prefThem: 50, prefThui: 40, activeTime: 'any', prefWeather: 'rain' },
+                // Các loài Tôm
+                { id: 'tom_dat', name: 'Tôm Đất Sông', icon: '🦐', rarity: 'Phổ biến', isShrimp: true, minW: 0.03, maxW: 0.12, diff: 16, basePrice: 18000, prefTanh: 75, prefThem: 20, prefThui: 10, activeTime: 'night', prefWeather: 'cloudy' },
+                { id: 'tom_cang_xanh', name: 'Tôm Càng Xanh', icon: '🦞', rarity: 'Quý hiếm', isShrimp: true, minW: 0.15, maxW: 0.65, diff: 38, basePrice: 85000, prefTanh: 85, prefThem: 20, prefThui: 15, activeTime: 'night', prefWeather: 'rain' },
+                { id: 'tom_cang_lua', name: 'Tôm Càng Lửa Khủng', icon: '🦞', rarity: 'Cực hiếm', isShrimp: true, minW: 0.4, maxW: 1.1, diff: 54, basePrice: 160000, prefTanh: 90, prefThem: 15, prefThui: 20, activeTime: 'night', prefWeather: 'cloudy' },
+                { id: 'tom_su', name: 'Tôm Sú Tự Nhiên', icon: '🦐', rarity: 'Quý hiếm', isShrimp: true, minW: 0.1, maxW: 0.35, diff: 30, basePrice: 70000, prefTanh: 80, prefThem: 25, prefThui: 10, activeTime: 'night', prefWeather: 'rain' },
+                { id: 'tom_tich', name: 'Tôm Tích Bãi Bồi', icon: '🦐', rarity: 'Quý hiếm', isShrimp: true, minW: 0.12, maxW: 0.4, diff: 35, basePrice: 75000, prefTanh: 85, prefThem: 10, prefThui: 25, activeTime: 'any', prefWeather: 'cloudy' },
+                // Cá phổ biến & đặc sản
+                { id: 'ca_ro_phi', name: 'Cá Rô Phi Đồng', icon: '🐟', rarity: 'Phổ biến', minW: 0.2, maxW: 1.4, diff: 18, basePrice: 14000, prefTanh: 50, prefThem: 60, prefThui: 10, activeTime: 'day', prefWeather: 'sunny' },
+                { id: 'ca_ro_dong', name: 'Cá Rô Đồng Mề', icon: '🐟', rarity: 'Phổ biến', minW: 0.1, maxW: 0.45, diff: 20, basePrice: 22000, prefTanh: 65, prefThem: 30, prefThui: 15, activeTime: 'any', prefWeather: 'rain' },
+                { id: 'ca_tre_vang', name: 'Cá Trê Vàng', icon: '🐋', rarity: 'Phổ biến', minW: 0.3, maxW: 2.2, diff: 26, basePrice: 26000, prefTanh: 75, prefThem: 10, prefThui: 80, activeTime: 'night', prefWeather: 'rain' },
+                { id: 'ca_tre_trang', name: 'Cá Trê Trắng', icon: '🐋', rarity: 'Phổ biến', minW: 0.4, maxW: 2.8, diff: 28, basePrice: 24000, prefTanh: 70, prefThem: 10, prefThui: 85, activeTime: 'night', prefWeather: 'rain' },
+                { id: 'ca_tre_rung', name: 'Cá Trê Rừng Đen', icon: '🐋', rarity: 'Quý hiếm', minW: 0.8, maxW: 4.5, diff: 44, basePrice: 55000, prefTanh: 80, prefThem: 5, prefThui: 90, activeTime: 'night', prefWeather: 'storm' },
+                { id: 'ca_loc_dong', name: 'Cá Lóc Đồng', icon: '🐊', rarity: 'Phổ biến', minW: 0.4, maxW: 2.5, diff: 32, basePrice: 38000, prefTanh: 60, prefThem: 40, prefThui: 5, activeTime: 'day', prefWeather: 'cloudy' },
+                { id: 'ca_loc_bong', name: 'Cá Lóc Bông Rừng', icon: '🐊', rarity: 'Quý hiếm', minW: 1.5, maxW: 7.5, diff: 62, basePrice: 95000, prefTanh: 75, prefThem: 35, prefThui: 10, activeTime: 'day', prefWeather: 'cloudy' },
+                { id: 'ca_diec', name: 'Cá Diếc Bạc', icon: '🐟', rarity: 'Phổ biến', minW: 0.15, maxW: 0.7, diff: 16, basePrice: 18000, prefTanh: 20, prefThem: 80, prefThui: 0, activeTime: 'day', prefWeather: 'sunny' },
+                { id: 'ca_bong_cat', name: 'Cá Bống Cát', icon: '🐟', rarity: 'Phổ biến', minW: 0.05, maxW: 0.25, diff: 14, basePrice: 20000, prefTanh: 70, prefThem: 20, prefThui: 10, activeTime: 'any', prefWeather: 'sunny' },
+                { id: 'ca_bong_tuong', name: 'Cá Bống Tượng', icon: '🐡', rarity: 'Quý hiếm', minW: 0.5, maxW: 2.8, diff: 42, basePrice: 120000, prefTanh: 85, prefThem: 15, prefThui: 15, activeTime: 'night', prefWeather: 'cloudy' },
+                { id: 'ca_bong_dua', name: 'Cá Bống Dừa', icon: '🐟', rarity: 'Phổ biến', minW: 0.1, maxW: 0.4, diff: 18, basePrice: 32000, prefTanh: 75, prefThem: 20, prefThui: 15, activeTime: 'any', prefWeather: 'cloudy' },
+                { id: 'ca_chot_giay', name: 'Cá Chốt Giấy', icon: '🐟', rarity: 'Phổ biến', minW: 0.1, maxW: 0.5, diff: 22, basePrice: 28000, prefTanh: 80, prefThem: 15, prefThui: 45, activeTime: 'night', prefWeather: 'rain' },
+                { id: 'ca_lang_nha', name: 'Cá Lăng Nha', icon: '🦈', rarity: 'Quý hiếm', minW: 1.0, maxW: 6.0, diff: 55, basePrice: 110000, prefTanh: 85, prefThem: 15, prefThui: 65, activeTime: 'night', prefWeather: 'rain' },
+                { id: 'ca_lang_duoi_do', name: 'Cá Lăng Đuôi Đỏ', icon: '🦈', rarity: 'Cực hiếm', minW: 3.0, maxW: 18.0, diff: 78, basePrice: 280000, prefTanh: 85, prefThem: 10, prefThui: 80, activeTime: 'night', prefWeather: 'storm' },
+                { id: 'ca_tra_soc', name: 'Cá Tra Sông', icon: '🐋', rarity: 'Phổ biến', minW: 1.2, maxW: 8.0, diff: 48, basePrice: 45000, prefTanh: 45, prefThem: 30, prefThui: 85, activeTime: 'any', prefWeather: 'cloudy' },
+                { id: 'ca_tra_dau', name: 'Cá Tra Dầu Khổng Lồ', icon: '🐳', rarity: 'Huyền thoại', minW: 15.0, maxW: 55.0, diff: 92, basePrice: 750000, prefTanh: 50, prefThem: 40, prefThui: 95, activeTime: 'night', prefWeather: 'rain' },
+                { id: 'ca_he_vang', name: 'Cá He Vàng', icon: '🐠', rarity: 'Phổ biến', minW: 0.3, maxW: 1.5, diff: 24, basePrice: 30000, prefTanh: 35, prefThem: 70, prefThui: 0, activeTime: 'day', prefWeather: 'sunny' },
+                { id: 'ca_chay', name: 'Cá Cháy Sông Hậu', icon: '🐟', rarity: 'Quý hiếm', minW: 0.5, maxW: 2.2, diff: 38, basePrice: 95000, prefTanh: 30, prefThem: 75, prefThui: 0, activeTime: 'day', prefWeather: 'cloudy' },
+                { id: 'ca_chep_dong', name: 'Cá Chép Đồng', icon: '🎏', rarity: 'Phổ biến', minW: 0.6, maxW: 4.5, diff: 36, basePrice: 48000, prefTanh: 15, prefThem: 85, prefThui: 5, activeTime: 'day', prefWeather: 'cloudy' },
+                { id: 'ca_chep_gion', name: 'Cá Chép Giòn', icon: '🎏', rarity: 'Quý hiếm', minW: 2.0, maxW: 8.0, diff: 56, basePrice: 135000, prefTanh: 25, prefThem: 80, prefThui: 10, activeTime: 'day', prefWeather: 'sunny' },
+                { id: 'ca_chép_koi', name: 'Cá Chép Koi Sổng Hồ', icon: '🎏', rarity: 'Cực hiếm', minW: 1.5, maxW: 6.0, diff: 52, basePrice: 240000, prefTanh: 10, prefThem: 90, prefThui: 0, activeTime: 'day', prefWeather: 'sunny' },
+                { id: 'ca_me_vinh', name: 'Cá Mè Vinh', icon: '🐟', rarity: 'Phổ biến', minW: 0.3, maxW: 1.8, diff: 25, basePrice: 28000, prefTanh: 20, prefThem: 80, prefThui: 0, activeTime: 'day', prefWeather: 'sunny' },
+                { id: 'ca_ro_hu', name: 'Cá Rô Hu', icon: '🐟', rarity: 'Phổ biến', minW: 0.8, maxW: 4.0, diff: 38, basePrice: 36000, prefTanh: 15, prefThem: 88, prefThui: 10, activeTime: 'day', prefWeather: 'cloudy' },
+                { id: 'ca_doi_muc', name: 'Cá Đối Mục', icon: '🐟', rarity: 'Phổ biến', minW: 0.2, maxW: 0.9, diff: 24, basePrice: 34000, prefTanh: 40, prefThem: 65, prefThui: 10, activeTime: 'day', prefWeather: 'sunny' },
+                { id: 'ca_huong', name: 'Cá Hường', icon: '🐠', rarity: 'Phổ biến', minW: 0.2, maxW: 0.8, diff: 20, basePrice: 25000, prefTanh: 20, prefThem: 75, prefThui: 0, activeTime: 'day', prefWeather: 'sunny' },
+                { id: 'ca_chem', name: 'Cá Chẽm Nước Lợ', icon: '🦈', rarity: 'Quý hiếm', minW: 1.2, maxW: 8.5, diff: 60, basePrice: 140000, prefTanh: 88, prefThem: 20, prefThui: 10, activeTime: 'night', prefWeather: 'cloudy' },
+                { id: 'ca_ngat', name: 'Cá Ngát Biển', icon: '🐋', rarity: 'Quý hiếm', minW: 0.8, maxW: 4.5, diff: 48, basePrice: 85000, prefTanh: 85, prefThem: 10, prefThui: 70, activeTime: 'night', prefWeather: 'rain' },
+                { id: 'ca_thoi_loi', name: 'Cá Thòi Lòi Bãi Bồi', icon: '🐸', rarity: 'Phổ biến', minW: 0.08, maxW: 0.3, diff: 18, basePrice: 35000, prefTanh: 75, prefThem: 20, prefThui: 15, activeTime: 'day', prefWeather: 'sunny' },
+                { id: 'ca_sac_ran', name: 'Cá Sặc Rằn', icon: '🐟', rarity: 'Phổ biến', minW: 0.1, maxW: 0.4, diff: 15, basePrice: 24000, prefTanh: 25, prefThem: 70, prefThui: 0, activeTime: 'day', prefWeather: 'sunny' },
+                { id: 'ca_sac_buom', name: 'Cá Sặc Bướm', icon: '🐠', rarity: 'Phổ biến', minW: 0.05, maxW: 0.18, diff: 12, basePrice: 16000, prefTanh: 20, prefThem: 75, prefThui: 0, activeTime: 'day', prefWeather: 'sunny' },
+                { id: 'ca_that_lat', name: 'Cá Thát Lát Cườm', icon: '🐟', rarity: 'Quý hiếm', minW: 0.4, maxW: 2.0, diff: 40, basePrice: 88000, prefTanh: 75, prefThem: 30, prefThui: 10, activeTime: 'night', prefWeather: 'cloudy' },
+                { id: 'ca_trach_lau', name: 'Cá Chạch Lấu', icon: '🐍', rarity: 'Quý hiếm', minW: 0.3, maxW: 1.6, diff: 45, basePrice: 145000, prefTanh: 80, prefThem: 15, prefThui: 35, activeTime: 'night', prefWeather: 'rain' },
+                { id: 'ca_tram_den', name: 'Cá Trắm Đen Săn Ốc', icon: '🐋', rarity: 'Cực hiếm', minW: 4.0, maxW: 22.0, diff: 80, basePrice: 320000, prefTanh: 75, prefThem: 20, prefThui: 30, activeTime: 'any', prefWeather: 'cloudy' },
+                { id: 'ca_chim_trang', name: 'Cá Chim Trắng', icon: '🐠', rarity: 'Phổ biến', minW: 0.8, maxW: 3.5, diff: 42, basePrice: 45000, prefTanh: 50, prefThem: 60, prefThui: 25, activeTime: 'day', prefWeather: 'sunny' },
+                { id: 'ca_tai_tuong', name: 'Cá Tai Tượng', icon: '🐠', rarity: 'Quý hiếm', minW: 1.0, maxW: 4.5, diff: 44, basePrice: 80000, prefTanh: 30, prefThem: 75, prefThui: 10, activeTime: 'day', prefWeather: 'sunny' },
+                { id: 'ca_ho_khong_lo', name: 'Cá Hô Khổng Lồ', icon: '🐳', rarity: 'Huyền thoại', minW: 18.0, maxW: 65.0, diff: 95, basePrice: 950000, prefTanh: 35, prefThem: 85, prefThui: 25, activeTime: 'any', prefWeather: 'cloudy' },
+                { id: 'ca_bong_lau', name: 'Cá Bông Lau Sông Cái', icon: '🦈', rarity: 'Quý hiếm', minW: 1.5, maxW: 7.0, diff: 58, basePrice: 150000, prefTanh: 75, prefThem: 25, prefThui: 55, activeTime: 'night', prefWeather: 'rain' },
+                { id: 'ca_dua', name: 'Cá Dứa Thiên Nhiên', icon: '🦈', rarity: 'Cực hiếm', minW: 2.0, maxW: 9.0, diff: 64, basePrice: 230000, prefTanh: 60, prefThem: 55, prefThui: 35, activeTime: 'any', prefWeather: 'cloudy' },
+                { id: 'ca_vo_co', name: 'Cá Vồ Cờ', icon: '🐳', rarity: 'Cực hiếm', minW: 5.0, maxW: 25.0, diff: 82, basePrice: 360000, prefTanh: 70, prefThem: 35, prefThui: 75, activeTime: 'night', prefWeather: 'storm' },
+                { id: 'ca_nheo_song', name: 'Cá Nheo Sông', icon: '🐋', rarity: 'Quý hiếm', minW: 1.5, maxW: 8.5, diff: 60, basePrice: 125000, prefTanh: 80, prefThem: 10, prefThui: 85, activeTime: 'night', prefWeather: 'rain' },
+                { id: 'ca_chinh_bong', name: 'Cá Chình Bông', icon: '🐍', rarity: 'Cực hiếm', minW: 2.0, maxW: 10.0, diff: 74, basePrice: 310000, prefTanh: 90, prefThem: 10, prefThui: 50, activeTime: 'night', prefWeather: 'rain' },
+                { id: 'ca_keo', name: 'Cá Kèo Bãi Bồi', icon: '🐟', rarity: 'Phổ biến', minW: 0.04, maxW: 0.15, diff: 16, basePrice: 24000, prefTanh: 65, prefThem: 30, prefThui: 25, activeTime: 'day', prefWeather: 'sunny' },
+                { id: 'ca_mu_nghe', name: 'Cá Mú Nghệ Rừng Sác', icon: '🐡', rarity: 'Huyền thoại', minW: 6.0, maxW: 30.0, diff: 88, basePrice: 680000, prefTanh: 92, prefThem: 10, prefThui: 30, activeTime: 'night', prefWeather: 'cloudy' },
+                { id: 'ca_duoi_bong', name: 'Cá Đuối Bông Nước Lợ', icon: '🛸', rarity: 'Huyền thoại', minW: 8.0, maxW: 35.0, diff: 90, basePrice: 720000, prefTanh: 88, prefThem: 15, prefThui: 45, activeTime: 'night', prefWeather: 'storm' }
+            ];
+
+            // Bổ sung thêm 35 loài cá địa phương đặc sắc để tổng đạt 90 loài
+            const extraSpecies = [
+                ['ca_danh', 'Cá Dảnh Sông Tiền', '🐟', 'Phổ biến', 0.2, 0.9, 22, 26000, 30, 75, 0, 'day', 'sunny', 'bo_ke_thanh_da'],
+                ['ca_linh_non', 'Cá Linh Non Đầu Mùa', '🐟', 'Phổ biến', 0.03, 0.12, 12, 22000, 35, 70, 0, 'day', 'rain', 'canh_dong_co'],
+                ['ca_linh_ong', 'Cá Linh Ống', '🐟', 'Phổ biến', 0.05, 0.2, 15, 24000, 35, 70, 0, 'day', 'cloudy', 'ruong_lua'],
+                ['ca_me_hoa', 'Cá Mè Hoa', '🐟', 'Phổ biến', 1.0, 5.5, 42, 34000, 15, 85, 30, 'day', 'sunny', 'ho_lao_tu'],
+                ['ca_me_trang', 'Cá Mè Trắng', '🐟', 'Phổ biến', 0.8, 4.0, 38, 30000, 15, 85, 25, 'day', 'sunny', 'ho_lao_tu'],
+                ['ca_tram_co', 'Cá Trắm Cỏ', '🐟', 'Phổ biến', 1.5, 7.0, 48, 52000, 10, 90, 5, 'day', 'cloudy', 'ho_lao_tu'],
+                ['ca_bong_mu', 'Cá Bống Mú Đen', '🐡', 'Quý hiếm', 0.6, 3.0, 46, 130000, 85, 15, 20, 'night', 'cloudy', 'dam_lay_rung_sac'],
+                ['ca_hong_my', 'Cá Hồng Mỹ', '🐠', 'Quý hiếm', 1.0, 4.8, 52, 120000, 85, 20, 15, 'any', 'cloudy', 'cong_dap_ong_lon'],
+                ['ca_dia_nau', 'Cá Dìa Nâu', '🐠', 'Phổ biến', 0.2, 0.8, 28, 48000, 50, 55, 10, 'day', 'sunny', 'dam_lay_rung_sac'],
+                ['ca_nau_bong', 'Cá Nâu Bông', '🐠', 'Phổ biến', 0.15, 0.6, 26, 45000, 45, 60, 10, 'day', 'sunny', 'cong_dap_ong_lon'],
+                ['ca_ro_bien', 'Cá Rô Biển', '🐟', 'Phổ biến', 0.2, 0.9, 25, 36000, 75, 25, 15, 'day', 'cloudy', 'dam_lay_rung_sac'],
+                ['ca_chot_trau', 'Cá Chốt Trâu', '🦈', 'Quý hiếm', 0.4, 1.8, 38, 65000, 82, 10, 60, 'night', 'rain', 'cau_sat_binh_loi'],
+                ['ca_chot_bong', 'Cá Chốt Bông', '🐟', 'Phổ biến', 0.15, 0.6, 24, 32000, 80, 15, 50, 'night', 'rain', 'kenh_ba_chieu'],
+                ['ca_ket', 'Cá Kết Sông Cửu Long', '🦈', 'Quý hiếm', 0.8, 3.5, 50, 135000, 85, 15, 45, 'night', 'cloudy', 'nga_ba_phu_my'],
+                ['ca_duong', 'Cá Đường Cửa Biển', '🐳', 'Huyền thoại', 8.0, 28.0, 86, 650000, 88, 20, 35, 'night', 'storm', 'nga_ba_phu_my'],
+                ['ca_suu_vang', 'Cá Sủ Vàng Quý Hiếm', '👑', 'Huyền thoại', 4.0, 16.0, 89, 1200000, 85, 30, 25, 'night', 'rain', 'nga_ba_phu_my'],
+                ['ca_co_ke', 'Cá Cờ Kẻ', '🐠', 'Phổ biến', 0.03, 0.1, 10, 12000, 40, 60, 0, 'day', 'sunny', 'ruong_lua'],
+                ['ca_lia_thia', 'Cá Lia Thia Đồng', '🐠', 'Phổ biến', 0.02, 0.06, 9, 15000, 45, 55, 0, 'day', 'sunny', 'canh_dong_co'],
+                ['ca_bac_dau', 'Cá Bạc Đầu', '🐟', 'Phổ biến', 0.02, 0.05, 8, 8000, 30, 70, 0, 'day', 'sunny', 'kenh_ba_chieu'],
+                ['ca_moi_dau', 'Cá Mòi Dầu', '🐟', 'Phổ biến', 0.1, 0.35, 18, 22000, 40, 65, 5, 'day', 'cloudy', 'bo_ke_thanh_da'],
+                ['ca_bong_lau_vang', 'Cá Bông Lau Kỳ Vàng', '🦈', 'Cực hiếm', 3.0, 12.0, 68, 260000, 78, 25, 60, 'night', 'rain', 'nga_ba_phu_my'],
+                ['ca_hu_song', 'Cá Hú Sông', '🐋', 'Phổ biến', 0.8, 3.5, 36, 42000, 45, 40, 75, 'any', 'cloudy', 'bo_ke_thanh_da'],
+                ['ca_ba_sa', 'Cá Ba Sa Tự Nhiên', '🐋', 'Phổ biến', 1.0, 4.5, 40, 44000, 40, 45, 75, 'any', 'cloudy', 'cau_sat_binh_loi'],
+                ['ca_duoi_ho', 'Cá Đuối Nước Ngọt', '🛸', 'Huyền thoại', 12.0, 45.0, 91, 820000, 85, 15, 55, 'night', 'rain', 'nga_ba_phu_my'],
+                ['ca_mang_ro', 'Cá Măng Rổ', '🐟', 'Quý hiếm', 1.2, 5.0, 54, 90000, 70, 45, 0, 'day', 'sunny', 'cong_dap_ong_lon'],
+                ['ca_nhai_bau', 'Cá Nhái Bầu', '🗡️', 'Phổ biến', 0.2, 0.8, 26, 28000, 75, 30, 0, 'day', 'sunny', 'bo_ke_thanh_da'],
+                ['ca_kim_trang', 'Cá Kìm Trắng', '🗡️', 'Phổ biến', 0.08, 0.3, 18, 20000, 65, 35, 0, 'day', 'sunny', 'cho_ben_cu'],
+                ['ca_bong_keo', 'Cá Bống Kèo Đen', '🐟', 'Phổ biến', 0.05, 0.18, 17, 26000, 70, 25, 20, 'day', 'cloudy', 'dam_lay_rung_sac'],
+                ['ca_thoi_loi_hoa', 'Cá Thòi Lòi Hoa', '🐸', 'Quý hiếm', 0.15, 0.45, 25, 55000, 80, 20, 20, 'day', 'rain', 'dam_lay_rung_sac'],
+                ['ca_loc_moi', 'Cá Lóc Môi Trề', '🐊', 'Quý hiếm', 1.0, 4.2, 48, 78000, 70, 35, 10, 'any', 'rain', 'rung_tre'],
+                ['ca_tre_phi', 'Cá Trê Lai Phi', '🐋', 'Phổ biến', 0.8, 4.0, 34, 25000, 65, 15, 85, 'night', 'rain', 'kenh_ba_chieu'],
+                ['ca_ro_dau_vuong', 'Cá Rô Đầu Vuông', '🐟', 'Phổ biến', 0.2, 0.7, 24, 30000, 60, 35, 15, 'any', 'rain', 'ruong_lua'],
+                ['ca_chach_bun', 'Cá Chạch Bùn', '🐍', 'Phổ biến', 0.06, 0.25, 20, 35000, 75, 20, 30, 'night', 'rain', 'ruong_lua'],
+                ['ca_luon_dong', 'Lươn Đồng Vàng', '🐍', 'Quý hiếm', 0.3, 1.4, 42, 95000, 85, 10, 45, 'night', 'rain', 'canh_dong_co'],
+                ['ca_ech_dong', 'Ếch Đồng Khủng', '🐸', 'Phổ biến', 0.15, 0.5, 22, 34000, 70, 30, 10, 'night', 'rain', 'canh_dong_co']
+            ];
+
+            const db = {};
+            core.forEach(f => { db[f.id] = f; });
+            extraSpecies.forEach(e => {
+                const [id, name, icon, rarity, minW, maxW, diff, basePrice, prefTanh, prefThem, prefThui, activeTime, prefWeather, locId] = e;
+                db[id] = { id, name, icon, rarity, minW, maxW, diff, basePrice, prefTanh, prefThem, prefThui, activeTime, prefWeather };
+                if (LOCATIONS[locId] && !LOCATIONS[locId].fishPool.includes(id)) {
+                    LOCATIONS[locId].fishPool.push(id);
+                }
+            });
+            return db;
+        })();
+
+        // ==========================================
+        // 5. CÔNG THỨC CHẾ TẠO (205+ CÔNG THỨC & BÍ KÍP ẨN)
+        // ==========================================
+        const RECIPES = (() => {
+            const baseRecipes = [
+                { id: 'r_can_tre', cat: 'rod', result: 'can_tre_tho', qty: 1, req: { tre_gia: 2, day_kem: 1 }, desc: 'Vót tre già và buộc khoen kẽm thành cần tay cơ bản.' },
+                { id: 'r_day_du', cat: 'line', result: 'day_du_cu', qty: 1, req: { day_kem: 2, xop_trang: 1, nap_chai: 1 }, desc: 'Tước dây dù cũ, gọt phao xốp và kẹp chì nắp chai.' },
+                { id: 'r_can_cam', cat: 'gear', result: 'can_cam_bo', qty: 1, req: { nhanh_tram: 2, day_kem: 1 }, desc: 'Cắm dọc bờ rạch để tự động bắt cá thụ động.' },
+                { id: 'r_danh_lua', cat: 'gear', result: 'danh_lua_tho', qty: 1, req: { nap_chai: 2, day_kem: 1 }, desc: 'Tạo tia lửa thô sơ để nhóm củi khi không có hộp quẹt.' },
+                { id: 'r_campfire', cat: 'gear', result: 'CAMPFIRE_ACTION', qty: 1, req: { cui_kho: 3 }, desc: 'Nhóm lửa trại sưởi ấm và xua muỗi suốt 6 tiếng ban đêm (Cần hộp quẹt hoặc đánh lửa).' },
+                { id: 'r_can_tom', cat: 'rod', result: 'can_cau_tom', qty: 1, locked: true, req: { truc_vang: 2, day_kem: 1 }, desc: 'Vót ngọn trúc mảnh tạo độ dẻo chuyên câu tôm càng xanh.' },
+                { id: 'r_can_truc', cat: 'rod', result: 'can_truc_dai', qty: 1, locked: true, req: { truc_vang: 3, day_kem: 2 }, desc: 'Uốn lửa trúc vàng tạo độ nảy chuẩn mực cho cần đài.' },
+                { id: 'r_can_tam_vong', cat: 'rod', result: 'can_tam_vong', qty: 1, locked: true, req: { go_tam_vong: 3, tre_gia: 1, day_kem: 3 }, desc: 'Ghép gốc tầm vông siêu cứng chuyên săn cá lớn.' },
+                { id: 'r_du_bat', cat: 'gear', result: 'du_bat_tre', qty: 1, locked: true, req: { tre_gia: 2, tam_bat: 2, day_kem: 1 }, desc: 'Dựng khung tre căng bạt nilon che mưa nắng.' },
+                { id: 'r_leu_bat', cat: 'gear', result: 'leu_bat', qty: 1, locked: true, req: { truc_vang: 2, tam_bat: 3, day_kem: 2 }, desc: 'Dựng lều kín gió chống sương đêm và muỗi đốt.' },
+                { id: 'r_moi_bi_truyen', cat: 'bait', result: 'moi_bi_truyen', qty: 2, locked: true, req: { cam_gao: 1, oc_buou: 1, mam_tom_u: 1 }, desc: 'Bài mồi cổ truyền dung hòa cả 3 vị Tanh - Thơm - Thúi.' },
+                { id: 'r_chao_ca', cat: 'food', result: 'chao_ca_bi_truyen', qty: 1, locked: true, req: { cui_kho: 2, giun_dat: 1 }, desc: 'Nấu nồi cháo nóng hổi giải cảm và phục hồi mạnh thể lực.' }
+            ];
+
+            const prefixes = ['Bí Kíp', 'Tuyệt Kỹ', 'Bài Thuốc', 'Công Thức', 'Mật Tịch', 'Gia Truyền', 'Sổ Tay'];
+            const regions = ['Sông Hậu', 'Miệt Vườn', 'Rừng Sác', 'Cầu Sắt', 'Bến Cũ', 'Thanh Đa', 'Đồng Tháp', 'Cà Mau', 'U Minh', 'Cần Giờ', 'Trà Vinh', 'Bến Tre', 'An Giang', 'Kiên Giang', 'Sóc Trăng'];
+            const baitIngs = ['giun_dat', 'oc_buou', 'de_men', 'chau_chau', 'trung_kien', 'tom_vun', 'trun_chi', 'tim_gan_bam', 'cam_gao', 'bap_u_chua', 'trung_vit_thoi', 'mam_tom_u', 'ca_sinh_bam'];
+            const woodIngs = ['tre_gia', 'truc_vang', 'go_tam_vong', 'nhanh_tram', 'cui_kho'];
+            const junkIngs = ['xop_trang', 'day_kem', 'nap_chai', 'tam_bat'];
+
+            let idx = 1;
+            for (let i = 0; i < 90; i++) {
+                const ing1 = baitIngs[i % baitIngs.length];
+                const ing2 = baitIngs[(i * 3 + 2) % baitIngs.length];
+                const reg = regions[i % regions.length];
+                const pref = prefixes[i % prefixes.length];
+                const newId = `dyn_bait_${idx++}`;
+                const tanh = Math.min(100, Math.round(((ITEMS[ing1].tanh + ITEMS[ing2].tanh) * 0.6) + (i % 15)));
+                const them = Math.min(100, Math.round(((ITEMS[ing1].them + ITEMS[ing2].them) * 0.6) + ((i * 7) % 15)));
+                const thui = Math.min(100, Math.round((((ITEMS[ing1].thui || 0) + (ITEMS[ing2].thui || 0)) * 0.65) + ((i * 5) % 15)));
+                const name = `${pref} Mồi ${reg} #${i + 1}`;
+                ITEMS[newId] = {
+                    id: newId, name, type: 'bait', icon: '🧪', tanh, them, thui,
+                    desc: `Bài mồi bí truyền vùng ${reg} (Tanh ${tanh} / Thơm ${them} / Thúi ${thui}).`
+                };
+                const req = {};
+                req[ing1] = 1;
+                req[ing2] = (ing1 === ing2) ? 2 : 1;
+                baseRecipes.push({
+                    id: `r_${newId}`, cat: 'bait', result: newId, qty: 2, locked: true, req,
+                    desc: `Ủ ${ITEMS[ing1].name} cùng ${ITEMS[ing2].name} theo mật tịch vùng ${reg}.`
+                });
+            }
+
+            for (let i = 0; i < 45; i++) {
+                const w1 = woodIngs[i % 4];
+                const j1 = junkIngs[i % junkIngs.length];
+                const reg = regions[(i + 4) % regions.length];
+                const newId = `dyn_rod_${idx++}`;
+                const power = 20 + (i % 68);
+                const luck = 10 + (i % 35);
+                const isShrimp = (i % 5 === 0);
+                const name = `${isShrimp ? 'Cần Tôm' : 'Cần Tay'} ${reg} Đời ${i + 1}`;
+                ITEMS[newId] = {
+                    id: newId, name, type: 'rod', icon: isShrimp ? '🦐' : '🎋', power, luck, shrimpBonus: isShrimp, price: 0,
+                    desc: `Cần chế tác thủ công kiểu ${reg} (Lực kéo: ${power}, Nhạy: ${luck}${isShrimp ? ', Chuyên tôm' : ''}).`
+                };
+                baseRecipes.push({
+                    id: `r_${newId}`, cat: 'rod', result: newId, qty: 1, locked: true,
+                    req: { [w1]: 2 + (i % 2), [j1]: 1 + (i % 2) },
+                    desc: `Vót ${ITEMS[w1].name} kết hợp ${ITEMS[j1].name} theo kỹ thuật ${reg}.`
+                });
+            }
+
+            for (let i = 0; i < 30; i++) {
+                const j1 = junkIngs[i % junkIngs.length];
+                const j2 = junkIngs[(i + 1) % junkIngs.length];
+                const reg = regions[(i + 7) % regions.length];
+                const newId = `dyn_line_${idx++}`;
+                const strength = 22 + (i % 65);
+                const sensitivity = 15 + (i % 35);
+                const isShrimp = (i % 4 === 0);
+                const name = `Thẻo Cước & Phao ${reg} #${i + 1}`;
+                ITEMS[newId] = {
+                    id: newId, name, type: 'line', icon: '🪝', strength, sensitivity, shrimpBonus: isShrimp, price: 0,
+                    desc: `Bộ thẻo cân chì chuẩn mực (Chịu tải: ${strength}, Độ nhạy: ${sensitivity}).`
+                };
+                baseRecipes.push({
+                    id: `r_${newId}`, cat: 'line', result: newId, qty: 1, locked: true,
+                    req: { [j1]: 2, [j2]: 1 },
+                    desc: `Bện ${ITEMS[j1].name} với ${ITEMS[j2].name} cân phao siêu nhạy.`
+                });
+            }
+
+            for (let i = 0; i < 35; i++) {
+                const b1 = baitIngs[(i * 2) % 8];
+                const reg = regions[(i + 2) % regions.length];
+                const newId = `dyn_food_${idx++}`;
+                const isMed = (i % 3 === 0);
+                const name = isMed ? `Bài Thuốc Nam ${reg} #${i + 1}` : `Món Nướng Dân Dã ${reg} #${i + 1}`;
+                ITEMS[newId] = {
+                    id: newId, name, type: 'consumable', icon: isMed ? '🌿' : '🍢', price: 0,
+                    stamGain: 25 + (i % 45), sanGain: 15 + (i % 35), curesDengue: isMed && (i % 6 === 0),
+                    desc: `${isMed ? 'Thang thuốc thảo mộc' : 'Món ăn đồng quê'} hồi +${25 + (i % 45)} Thể lực, +${15 + (i % 35)} Tinh thần.`
+                };
+                baseRecipes.push({
+                    id: `r_${newId}`, cat: 'food', result: newId, qty: 1, locked: true,
+                    req: { cui_kho: 1 + (i % 2), [b1]: 1 },
+                    desc: `Chế biến từ ${ITEMS[b1].name} trên bếp củi lửa hồng.`
+                });
+            }
+
+            return baseRecipes;
+        })();
+
+        // ==========================================
+        // 6. NHÂN VẬT GIANG HỒ & SỰ KIỆN BẤT NGỜ
+        // ==========================================
+        const NPCS = [
+            {
+                id: 'lao_bay', name: 'Lão Bảy Đồ Câu', role: 'Chủ tiệm Chợ Bến Cũ', icon: '👴',
+                desc: 'Thợ làm cần lão luyện, nắm giữ nhiều bí kíp uốn trúc và pha mồi.',
+                milestones: [
+                    { req: 30, id: 'lb_30', label: 'Truyền thụ bí kíp Cần Tầm Vông Săn Hàng', trigger: () => unlockRecipe('r_can_tam_vong', 'Lão Bảy Đồ Câu') },
+                    { req: 55, id: 'lb_55', label: 'Truyền thụ bí kíp Mồi Cốt Thần Sầu & tiết lộ cá hiếm', trigger: () => { unlockRecipe('r_moi_bi_truyen', 'Lão Bảy Đồ Câu'); revealUncaughtFishSecret('Lão Bảy Đồ Câu'); } }
+                ]
+            },
+            {
+                id: 'di_sau', name: 'Dì Sáu Vé Số', role: 'Người bán vé số dạo', icon: '👵',
+                desc: 'Hay đi dọc bờ kè và chợ, mang lại vận may và biết nhiều món ăn dân dã.',
+                milestones: [
+                    { req: 30, id: 'ds_30', label: 'Chỉ công thức nấu Nồi Cháo Cá Lóc Rau Đắng', trigger: () => unlockRecipe('r_chao_ca', 'Dì Sáu Vé Số') },
+                    { req: 50, id: 'ds_50', label: 'Tặng Bùa May Mắn & tiết lộ luồng cá quý', trigger: () => { addItem('vitamin_b1', 2); revealUncaughtFishSecret('Dì Sáu Vé Số'); } }
+                ]
+            },
+            {
+                id: 'binh_mom', name: 'Bình "Móm"', role: 'Hội trưởng Câu Đài', icon: '🧢',
+                desc: 'Đam mê câu đài, thích rủ rê tỷ thí giao lưu.',
+                milestones: [
+                    { req: 30, id: 'bm_30', label: 'Truyền bí kíp vót Cần Trúc Câu Đài', trigger: () => unlockRecipe('r_can_truc', 'Bình "Móm"') },
+                    { req: 50, id: 'bm_50', label: 'Tặng cuộn Cước Trắng Thái Lan & chỉ điểm ổ cá', trigger: () => { addItem('cuoc_nylon', 1); revealUncaughtFishSecret('Bình "Móm"'); } }
+                ]
+            },
+            {
+                id: 'chu_tam', name: 'Chú Tám Đò Ngang', role: 'Người lái đò sông cái', icon: '🚣',
+                desc: 'Rành từng con nước, luồng cá di cư và cách dựng trại ven sông.',
+                milestones: [
+                    { req: 25, id: 'ct_25', label: 'Chỉ cách dựng Lều Bạt Câu Đêm chống sương muỗi', trigger: () => unlockRecipe('r_leu_bat', 'Chú Tám Đò Ngang') },
+                    { req: 45, id: 'ct_45', label: 'Tiết lộ bí mật săn thủy quái đáy sông', trigger: () => revealUncaughtFishSecret('Chú Tám Đò Ngang') }
+                ]
+            },
+            {
+                id: 'anh_tu', name: 'Anh Tư Kiểm Ngư', role: 'Tuần tra thủy sản', icon: '👮',
+                desc: 'Nghiêm khắc với nạn kích điện, quý trọng cần thủ chân chính.',
+                milestones: [
+                    { req: 30, id: 'at_30', label: 'Tặng Dù Câu Đài 2 Tầng chống nắng mưa', trigger: () => { addItem('du_cau_dai', 1); addLog('🎁 Anh Tư Kiểm Ngư quý mến tặng bạn 1x Dù Câu Đài 2 Tầng!', 'text-emerald-300 font-bold'); } },
+                    { req: 50, id: 'at_50', label: 'Tiết lộ tọa độ & tập tính loài cá quý hiếm', trigger: () => revealUncaughtFishSecret('Anh Tư Kiểm Ngư') }
+                ]
+            },
+            {
+                id: 'chi_ba', name: 'Chị Ba Bán Tôm', role: 'Tiểu thương Chợ Bến Cũ', icon: '👩',
+                desc: 'Chuyên thu mua tôm sông, rất rành nghề câu tôm càng xanh.',
+                milestones: [
+                    { req: 30, id: 'cb_30', label: 'Truyền bí kíp làm Cần Câu Tôm Đầu Dẻo', trigger: () => unlockRecipe('r_can_tom', 'Chị Ba Bán Tôm') },
+                    { req: 50, id: 'cb_50', label: 'Tặng Thẻo Lưỡi Tôm & chỉ cách săn Tôm Càng Xanh', trigger: () => { addItem('luoi_tom_nho', 1); revealUncaughtFishSecret('Chị Ba Bán Tôm'); } }
+                ]
+            },
+            {
+                id: 'lao_an_may', name: 'Lão Ăn Mày Kỳ Bí', role: 'Ẩn sĩ bờ bụi', icon: '🧙‍♂️',
+                desc: 'Ông lão rách rưới nhưng thấu hiểu mọi tuyệt kỹ câu cá thất truyền trong thiên hạ.',
+                milestones: [
+                    { req: 25, id: 'lam_25', label: 'Truyền thụ bí kíp Mồi Cốt Thần Sầu', trigger: () => unlockRecipe('r_moi_bi_truyen', 'Lão Ăn Mày Kỳ Bí') },
+                    { req: 45, id: 'lam_45', label: 'Tiết lộ bí mật loài cá huyền thoại chưa từng thấy', trigger: () => revealUncaughtFishSecret('Lão Ăn Mày Kỳ Bí') }
+                ]
+            }
+        ];
+
+        const RANDOM_EVENTS = [
+            {
+                id: 'ev_veso', npcId: 'di_sau', icon: '👵', tag: 'Gặp gỡ bên đường', title: 'Dì Sáu Mời Mua Vé Số',
+                desc: 'Dì Sáu cầm xấp vé số kiến thiết bước tới cười hiền: "Cậu hai mua giúp dì vài tờ lấy hên giật cá khủng đi cậu!"',
+                choices: [
+                    { text: 'Mua 1 tờ ủng hộ (10.000đ)', reqMoney: 10000, action: () => { meetNpc('di_sau', 5); buyLottery(1); } },
+                    { text: 'Mua 5 tờ cầu lộc (50.000đ)', reqMoney: 50000, action: () => { meetNpc('di_sau', 12); buyLottery(5); } },
+                    { text: 'Lễ phép chào hỏi rồi từ chối', action: () => { meetNpc('di_sau', 2); addLog('Bạn lễ phép từ chối, dì Sáu vẫn cười chúc bạn lên hàng.', 'text-slate-300'); } }
+                ]
+            },
+            {
+                id: 'ev_binhmom', npcId: 'binh_mom', icon: '🧢', tag: 'Giao lưu cần thủ', title: 'Bình "Móm" Rủ Tỷ Thí',
+                desc: 'Bình "Móm" vác hộp đồ câu đài ngồi xuống cạnh bạn: "Ê ông bạn, làm kèo xem ai giật cá nhạy hơn không? Cá độ ly cà phê 30k vui vẻ!"',
+                choices: [
+                    { text: 'Nhận kèo tỷ thí (Cược 30.000đ)', reqMoney: 30000, action: () => { meetNpc('binh_mom', 6); duelBinhMom(); } },
+                    { text: 'Ngồi chém gió học kinh nghiệm', action: () => { meetNpc('binh_mom', 8); changeSanity(10); changeRep(2); addLog('Hai anh em ngồi bàn chuyện phao đài, tinh thần sảng khoái (+10 Tinh thần).', 'text-cyan-300'); } }
+                ]
+            },
+            {
+                id: 'ev_chiba', npcId: 'chi_ba', icon: '🦐', tag: 'Lộc chợ quê', title: 'Chị Ba Cho Tôm Vụn',
+                desc: 'Chị Ba đang dọn sạp tôm ngoài bến thấy bạn vác cần đi ngang liền gọi: "Nè, lấy bịch tôm vụn này về làm mồi câu cá lăng nhạy lắm!"',
+                choices: [
+                    { text: 'Cảm ơn chị Ba & nhận mồi', action: () => { meetNpc('chi_ba', 10); addItem('tom_vun', 3); addLog('Bạn nhận được 3x Tôm Vụn Bóc Vỏ từ chị Ba!', 'text-emerald-300'); } }
+                ]
+            },
+            {
+                id: 'ev_chutam', npcId: 'chu_tam', icon: '🚣', tag: 'Người lái đò', title: 'Chú Tám Đò Ngang Bắt Chuyện',
+                desc: 'Chú Tám chống sào ghé mũi đò vào bờ rạch mời bạn điếu thuốc lào, chỉ cho mấy luồng nước xoáy cá hay tụ tập.',
+                choices: [
+                    { text: 'Ngồi trò chuyện hỏi thăm con nước', action: () => { meetNpc('chu_tam', 10); changeSanity(8); addLog('Chú Tám vui vẻ kể chuyện sông nước và chỉ điểm luồng cá ăn đêm (+8 Tinh thần).', 'text-cyan-300'); } },
+                    { text: 'Biếu chú chai nước ngọt (12.000đ)', reqMoney: 12000, action: () => { state.money -= 12000; meetNpc('chu_tam', 16); addLog('Chú Tám cảm động lắm, xem bạn như người nhà!', 'text-emerald-300'); } }
+                ]
+            },
+            {
+                id: 'ev_lao_an_may', npcId: 'lao_an_may', icon: '🧙‍♂️', tag: 'Cơ duyên kỳ ngộ', title: 'Lão Ăn Mày Kỳ Bí Bán Bí Kíp',
+                desc: 'Dưới gốc cây đa ven bờ xuất hiện một lão ăn mày râu tóc bạc phơ, tay cầm mấy cuộn giấy ố vàng: "Tiểu tử có duyên lắm, lão có cuốn bí kíp câu cá thất truyền, chỉ lấy 40.000đ tiền rượu thôi!"',
+                choices: [
+                    { text: 'Mua ngay cuốn bí kíp (40.000đ)', reqMoney: 40000, action: () => { state.money -= 40000; meetNpc('lao_an_may', 15); unlockRandomAdvancedRecipe('Lão Ăn Mày Kỳ Bí'); } },
+                    { text: 'Tặng lão gói mì tôm làm quen', action: () => {
+                        meetNpc('lao_an_may', 10);
+                        if ((state.inv.mi_tom || 0) > 0) { consumeItem('mi_tom', 1); addLog('Lão ăn mày nhận gói mì tôm cười khà khà, gật gù khen bạn có lòng tốt!', 'text-amber-300'); }
+                        else { addLog('Bạn chắp tay chào lão rồi tiếp tục hành trình.', 'text-slate-300'); }
+                    } }
+                ]
+            },
+            {
+                id: 'ev_kichdien', npcId: 'anh_tu', icon: '⚡', tag: 'Biến cố bờ sông', title: 'Phát Hiện Ghe Kích Điện!',
+                desc: 'Một chiếc ghe nhỏ đang chích điện làm cá nổi trắng mặt nước gần chỗ bạn câu. Anh Tư Kiểm Ngư đang tuần tra cách đó không xa.',
+                choices: [
+                    { text: 'Báo tin ngay cho Anh Tư Kiểm Ngư', action: () => { meetNpc('anh_tu', 18); changeRep(12); state.money += 50000; addLog('Anh Tư kịp thời bắt giữ ghe kích điện, thưởng nóng cho bạn 50.000đ và +12 Danh vọng!', 'text-amber-300'); } },
+                    { text: 'Lờ đi tránh rắc rối (-5 Tinh thần)', action: () => { changeSanity(-5); addLog('Nhìn đàn cá con chết nổi trên sông khiến lòng bạn nặng trĩu.', 'text-slate-400'); } }
+                ]
+            },
+            {
+                id: 'ev_troi_gio', icon: '💨', tag: 'Sự cố bất ngờ', title: 'Gió Lốc Giật Bay Đồ!',
+                desc: 'Một cơn gió lốc bất ngờ thổi tạt qua bờ kè làm túi đồ của bạn chao đảo!',
+                choices: [
+                    { text: 'Nhanh tay giữ chặt giỏ đồ (-6 Thể lực)', action: () => { changeStamina(-6); addLog('Bạn kịp giữ lại túi đồ nhưng tốn một ít sức.', 'text-amber-200'); } },
+                    { text: 'Chậm tay để gió thổi bay mất mồi', action: () => { loseRandomBait(); } }
+                ]
+            }
+        ];
+
+        // ==========================================
+        // 7. TRẠNG THÁI GAME & KHỞI TẠO
+        // ==========================================
+        const DEFAULT_STATE = {
+            day: 1,
+            hour: 6,
+            minute: 0,
+            seasonIdx: 0,
+            weatherIdx: 0,
+            locationId: 'kenh_ba_chieu',
+            selectedMapLoc: 'kenh_ba_chieu',
+            money: 25000,
+            rep: 0,
+            stamina: 100,
+            maxStamina: 100,
+            sanity: 100,
+            maxSanity: 100,
+            hoursAwake: 0,
+            campfireHours: 0,
+            mosquitoRepelHours: 0,
+            hasDengue: false,
+            skunkStreak: 0,
+            vehicleId: 'walk',
+            fuel: 100,
+            lotteryBet: null, // { number: '68', amount: 20000, day: 1 }
+            eqRod: null,
+            eqLine: null,
+            eqBait: null,
+            customMix: { tanh: 50, them: 50, thui: 50, name: 'Mồi Tự Phối' },
+            inv: {
+                mi_tom: 1,
+                hop_quet: 1
+            },
+            fishBag: [],
+            fishDex: {},
+            setLines: [], // { locId, timeLeft }
+            unlockedRecipes: ['r_can_tre', 'r_day_du', 'r_can_cam', 'r_danh_lua', 'r_campfire'],
+            metNpcs: [],
+            npcAffinity: { lao_bay: 0, di_sau: 0, binh_mom: 0, chu_tam: 0, anh_tu: 0, chi_ba: 0, lao_an_may: 0 },
+            claimedMilestones: [],
+            revealedFishTips: [],
+            logs: []
+        };
+
+        let state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+        let soakInterval = null;
+        let combatInterval = null;
+        let mgInterval = null;
+
+        let soakData = { active: false, seconds: 0, chum: 0, twitchBonus: 0 };
+        let combatData = { active: false, fish: null, weight: 0, dist: 15, maxDist: 15, tension: 45, reeling: false, surgeTimer: 0, surgeForce: 0 };
+        let mgData = { active: false, type: 'wood', round: 1, maxRounds: 3, pos: 0, dir: 1, zoneStart: 35, zoneWidth: 30, rewards: [] };
+
+        // ==========================================
+        // 8. HỆ THỐNG THỜI GIAN, SINH TỒN & THỨC ĐÊM
+        // ==========================================
+        function advanceTime(minutes) {
+            state.minute += minutes;
+            while (state.minute >= 60) {
+                state.minute -= 60;
+                state.hour += 1;
+                state.hoursAwake += 1;
+                onHourPassed();
+                if (state.hour >= 24) {
+                    state.hour -= 24;
+                    state.day += 1;
+                    if (state.day % 15 === 1 && state.day > 1) {
+                        state.seasonIdx = (state.seasonIdx + 1) % SEASONS.length;
+                        addLog(`🗓️ Đất trời chuyển sang mùa ${SEASONS[state.seasonIdx].name} ${SEASONS[state.seasonIdx].icon}!`, 'text-amber-300 font-bold');
+                    }
+                }
+            }
+            updateUI();
+            saveGame();
+        }
+
+        function onHourPassed() {
+            // Giảm thời gian lửa trại & kem chống muỗi
+            if (state.campfireHours > 0) state.campfireHours--;
+            if (state.mosquitoRepelHours > 0) state.mosquitoRepelHours--;
+
+            // Xổ số kiến thiết chiều 16h mỗi ngày
+            if (state.hour === 16 && state.lotteryBet && state.lotteryBet.day <= state.day) {
+                resolveDailyLottery();
+            }
+
+            // Tiến độ cần cắm bờ
+            state.setLines.forEach(sl => {
+                if (sl.timeLeft > 0) sl.timeLeft--;
+            });
+
+            const loc = LOCATIONS[state.locationId];
+            const weather = WEATHERS[state.weatherIdx];
+            const isNight = (state.hour >= 18 || state.hour < 5);
+            const isHotNoon = (state.hour >= 10 && state.hour <= 15 && weather.id === 'sunny');
+            const isRainy = (weather.id === 'rain' || weather.id === 'storm');
+            const hasUmbrella = (state.inv.du_bat_tre > 0 || state.inv.du_cau_dai > 0);
+            const hasTent = (state.inv.leu_bat > 0);
+            const inTown = loc.services.length > 0;
+
+            // 1. Nắng nóng hoặc Mưa rào không có ô dù
+            if (!inTown && (isHotNoon || isRainy) && !hasUmbrella) {
+                const loss = weather.id === 'storm' ? 6 : 3;
+                changeStamina(-loss);
+                changeSanity(-2);
+                addLog(isHotNoon
+                    ? `☀️ Nắng trưa gay gắt mà không có ô dù khiến bạn mất sức (-${loss} Thể lực, -2 Tinh thần).`
+                    : `🌧️ Trời mưa ướt sũng vì không có ô dù che chắn (-${loss} Thể lực, -2 Tinh thần).`, 'text-amber-400');
+            }
+
+            // 2. Buổi tối ở bãi hoang không có lửa trại hoặc lều bạt -> Lạnh & Muỗi sốt xuất huyết
+            if (isNight && !inTown && state.campfireHours <= 0 && !hasTent) {
+                changeStamina(-4);
+                changeSanity(-3);
+                if (!state.hasDengue && state.mosquitoRepelHours <= 0 && Math.random() < 0.22) {
+                    state.hasDengue = true;
+                    addLog('🦟 Đêm tối không có lửa trại hay lều bạt, bạn bị muỗi độc đốt mắc Sốt Xuất Huyết! Hãy mua thuốc hạ sốt ở tiệm thuốc tây.', 'text-rose-400 font-bold');
+                } else {
+                    addLog('🌙 Sương đêm lạnh buốt và muỗi vo ve vì không có lửa trại/lều bạt (-4 Thể lực, -3 Tinh thần).', 'text-indigo-300');
+                }
+            }
+
+            // 3. Tác hại của bệnh Sốt xuất huyết
+            if (state.hasDengue) {
+                changeStamina(-5);
+                changeSanity(-4);
+                addLog('🤒 Cơn sốt xuất huyết hành hạ khiến cơ thể rã rời (-5 Thể lực, -4 Tinh thần).', 'text-rose-400');
+            }
+
+            // 4. Thức đêm quá lâu không ngủ
+            if (state.hoursAwake >= 14) {
+                const fatigue = state.hoursAwake >= 18 ? 6 : 3;
+                changeStamina(-fatigue);
+                changeSanity(-fatigue);
+                addLog(`🥱 Bạn đã thức liên tục ${state.hoursAwake} tiếng không ngủ, mắt hoa đầu choáng (-${fatigue} Thể lực, -${fatigue} Tinh thần).`, 'text-purple-300');
+            }
+        }
+
+        function changeStamina(delta) {
+            state.stamina = Math.max(0, Math.min(state.maxStamina, Math.round(state.stamina + delta)));
+            if (state.stamina === 0) {
+                triggerFaint('kiệt sức vì thể lực chạm đáy');
+            }
+        }
+
+        function changeSanity(delta) {
+            state.sanity = Math.max(0, Math.min(state.maxSanity, Math.round(state.sanity + delta)));
+            if (state.sanity === 0) {
+                triggerFaint('suy sụp tinh thần và ngất xỉu bên bờ nước');
+            }
+        }
+
+        function changeRep(delta) {
+            state.rep = Math.max(0, state.rep + delta);
+        }
+
+        function modAffinity(npcId, delta) {
+            if (!state.metNpcs.includes(npcId)) state.metNpcs.push(npcId);
+            state.npcAffinity[npcId] = (state.npcAffinity[npcId] || 0) + delta;
+            checkNpcMilestones(npcId);
+        }
+
+        function meetNpc(npcId, delta = 5) {
+            const firstMeet = !state.metNpcs.includes(npcId);
+            if (firstMeet) {
+                state.metNpcs.push(npcId);
+                const npc = NPCS.find(n => n.id === npcId);
+                if (npc) addLog(`🤝 Bạn đã kết giao với ${npc.icon} ${npc.name} (${npc.role})!`, 'text-cyan-300 font-semibold');
+            }
+            if (delta !== 0) modAffinity(npcId, delta);
+        }
+
+        function unlockRecipe(recipeId, sourceName) {
+            if (!state.unlockedRecipes.includes(recipeId)) {
+                state.unlockedRecipes.push(recipeId);
+                const r = RECIPES.find(x => x.id === recipeId);
+                const resName = r ? (ITEMS[r.result]?.name || r.id) : recipeId;
+                addLog(`📜 CƠ DUYÊN MỞ KHÓA! Nhờ ${sourceName}, bạn đã lĩnh hội công thức chế tạo: ${resName}!`, 'text-amber-300 font-extrabold');
+            }
+        }
+
+        function unlockRandomAdvancedRecipe(sourceName) {
+            const lockedList = RECIPES.filter(r => !state.unlockedRecipes.includes(r.id));
+            if (lockedList.length === 0) {
+                changeRep(10);
+                addLog(`📜 Bạn đã thông thạo toàn bộ bí kíp trong thiên hạ (+10 Danh vọng)!`, 'text-amber-300 font-bold');
+                return;
+            }
+            const pick = lockedList[Math.floor(Math.random() * lockedList.length)];
+            unlockRecipe(pick.id, sourceName);
+        }
+
+        function revealUncaughtFishSecret(sourceName) {
+            const uncaught = Object.values(FISH_DB).filter(f => !state.fishDex[f.id] && !state.revealedFishTips.includes(f.id));
+            if (uncaught.length === 0) return;
+            const target = uncaught[Math.floor(Math.random() * uncaught.length)];
+            state.revealedFishTips.push(target.id);
+            const locFound = Object.values(LOCATIONS).find(l => l.fishPool.includes(target.id));
+            const timeTxt = target.activeTime === 'night' ? 'Ban đêm' : target.activeTime === 'day' ? 'Ban ngày' : 'Cả ngày lẫn đêm';
+            addLog(`🤫 BÍ MẬT THỦY SẢN từ ${sourceName}: Loài "${target.name}" hay xuất hiện ở ${locFound ? locFound.name : 'vùng nước sâu'} vào ${timeTxt}, cực mê mồi có chỉ số Tanh ~${target.prefTanh}, Thơm ~${target.prefThem}, Thúi ~${target.prefThui || 0}!`, 'text-cyan-300 font-bold');
+        }
+
+        function checkNpcMilestones(npcId) {
+            const npc = NPCS.find(n => n.id === npcId);
+            if (!npc || !npc.milestones) return;
+            const aff = state.npcAffinity[npcId] || 0;
+            npc.milestones.forEach(m => {
+                if (aff >= m.req && !state.claimedMilestones.includes(m.id)) {
+                    state.claimedMilestones.push(m.id);
+                    m.trigger();
+                }
+            });
+        }
+
+        function triggerFaint(reason) {
+            stopAllActiveScenes();
+            const fee = Math.min(state.money, 30000);
+            state.money -= fee;
+            state.locationId = 'kenh_ba_chieu';
+            state.stamina = 45;
+            state.sanity = 45;
+            state.hoursAwake = 0;
+            state.hour = (state.hour + 6) % 24;
+            addLog(`🚑 Bạn bị ${reason}! Người dân ven đường đưa bạn về Kênh Bà Chiểu nghỉ ngơi (tốn ${formatMoney(fee)} tiền nước thuốc).`, 'text-rose-400 font-bold');
+            updateUI();
+        }
+
+        // ==========================================
+        // 9. THU THẬP NGUYÊN LIỆU & MINI-GAME
+        // ==========================================
+        function startGather(type) {
+            if (soakData.active || combatData.active || mgData.active) return;
+            const loc = LOCATIONS[state.locationId];
+
+            if (type === 'wood' && !loc.canWood) {
+                addLog(`❌ ${loc.name} không có rừng cây để chặt. Hãy tới Rừng Tre & Tràm Cổ Thụ hoặc Đầm Lầy Rừng Sác!`, 'text-amber-300');
+                return;
+            }
+            if (type === 'bait' && !loc.canBait) {
+                addLog(`❌ ${loc.name} toàn bê tông/nước sâu khó tìm mồi. Hãy ra Ruộng Lúa, Cánh Đồng Cỏ, Rừng Tre hoặc Chợ!`, 'text-amber-300');
+                return;
+            }
+            if (type === 'trash' && !loc.canTrash) {
+                addLog(`❌ Khu vực ${loc.name} khá sạch sẽ, không có bãi rác ven bờ để lục.`, 'text-amber-300');
+                return;
+            }
+
+            if (state.stamina < 8) {
+                addLog('⚠️ Thể lực quá thấp, hãy ăn uống hoặc nghỉ ngơi trước!', 'text-rose-400');
+                return;
+            }
+
+            // Thể lực ảnh hưởng độ rộng vùng chuẩn của mini-game
+            const stamRatio = state.stamina / state.maxStamina;
+            const zoneW = Math.round(18 + stamRatio * 20); // 18% -> 38%
+            const zoneS = Math.floor(Math.random() * (90 - zoneW)) + 5;
+
+            mgData = {
+                active: true,
+                type,
+                round: 1,
+                maxRounds: 3,
+                pos: 0,
+                dir: 1,
+                zoneStart: zoneS,
+                zoneWidth: zoneW,
+                rewards: []
+            };
+
+            const titles = {
+                wood: ['🪓 Chặt Tre & Lấy Gỗ', 'Canh vạch vàng vào vùng xanh để hạ đúng thân gỗ tốt!'],
+                bait: ['🪱 Đào Giun & Bắt Mồi', 'Nhấn đúng nhịp để tóm gọn mồi sống trước khi chúng chui mất!'],
+                trash: ['🗑️ Lục Rác Bãi Bồi', 'Tìm kiếm xốp, dây kẽm, chì vụn và tấm bạt tái chế!']
+            };
+
+            document.getElementById('mg-title').textContent = titles[type][0];
+            document.getElementById('mg-desc').textContent = titles[type][1];
+            document.getElementById('mg-round').textContent = `Lượt 1/${mgData.maxRounds}`;
+            document.getElementById('mg-zone').style.left = `${mgData.zoneStart}%`;
+            document.getElementById('mg-zone').style.width = `${mgData.zoneWidth}%`;
+            document.getElementById('minigame-panel').classList.remove('hidden');
+
+            if (mgInterval) clearInterval(mgInterval);
+            mgInterval = setInterval(() => {
+                mgData.pos += mgData.dir * 2.6;
+                if (mgData.pos >= 98) { mgData.pos = 98; mgData.dir = -1; }
+                if (mgData.pos <= 0) { mgData.pos = 0; mgData.dir = 1; }
+                document.getElementById('mg-cursor').style.left = `${mgData.pos}%`;
+            }, 25);
+        }
+
+        function hitMinigame() {
+            if (!mgData.active) return;
+            const hit = (mgData.pos >= mgData.zoneStart && mgData.pos <= mgData.zoneStart + mgData.zoneWidth);
+            const stamMult = state.stamina >= 50 ? 1 : 0.7;
+            const bonusQty = hit ? (Math.random() < 0.5 * stamMult ? 2 : 1) : (Math.random() < 0.4 ? 1 : 0);
+
+            if (bonusQty > 0) {
+                const item = rollGatherItem(mgData.type, hit);
+                mgData.rewards.push({ id: item, qty: bonusQty });
+                addItem(item, bonusQty);
+            }
+
+            if (mgData.round >= mgData.maxRounds) {
+                closeMinigame(false);
+            } else {
+                mgData.round++;
+                mgData.zoneStart = Math.floor(Math.random() * (90 - mgData.zoneWidth)) + 5;
+                document.getElementById('mg-round').textContent = `Lượt ${mgData.round}/${mgData.maxRounds}`;
+                document.getElementById('mg-zone').style.left = `${mgData.zoneStart}%`;
+            }
+        }
+
+        function rollGatherItem(type, isPerfect) {
+            const loc = state.locationId;
+            if (type === 'wood') {
+                if (Math.random() < 0.35) return 'cui_kho';
+                if (isPerfect) {
+                    const pool = ['truc_vang', 'go_tam_vong', 'tre_gia'];
+                    return pool[Math.floor(Math.random() * pool.length)];
+                }
+                return Math.random() < 0.5 ? 'tre_gia' : 'nhanh_tram';
+            }
+            if (type === 'bait') {
+                if (loc === 'cho_ben_cu') return Math.random() < 0.6 ? 'tom_vun' : 'ca_sinh_bam';
+                if (loc === 'canh_dong_co') return Math.random() < 0.6 ? 'chau_chau' : 'de_men';
+                if (loc === 'ruong_lua') return Math.random() < 0.65 ? 'giun_dat' : 'oc_buou';
+                if (loc === 'rung_tre' || loc === 'dam_lay_rung_sac') return Math.random() < 0.6 ? 'trung_kien' : 'giun_dat';
+                return Math.random() < 0.5 ? 'giun_dat' : 'oc_buou';
+            }
+            // trash
+            const trashPool = ['xop_trang', 'day_kem', 'nap_chai', 'tam_bat', 'cui_kho', 'ca_sinh_bam'];
+            return trashPool[Math.floor(Math.random() * trashPool.length)];
+        }
+
+        function closeMinigame(aborted) {
+            if (mgInterval) clearInterval(mgInterval);
+            mgInterval = null;
+            mgData.active = false;
+            document.getElementById('minigame-panel').classList.add('hidden');
+
+            changeStamina(-5);
+            advanceTime(35);
+
+            if (mgData.rewards.length > 0) {
+                const summary = mgData.rewards.map(r => `${r.qty}x ${ITEMS[r.id].name}`).join(', ');
+                addLog(`✅ Thu hoạch tại ${LOCATIONS[state.locationId].name}: ${summary}.`, 'text-emerald-300');
+
+                // Cơ duyên ngộ đạo khi chặt cây hoặc nhặt được bí kíp trong bãi rác
+                if (mgData.type === 'wood' && Math.random() < 0.16) {
+                    unlockRandomAdvancedRecipe('Ngộ Đạo Giữa Rừng Sâu');
+                } else if (mgData.type === 'trash' && Math.random() < 0.14) {
+                    unlockRandomAdvancedRecipe('Cuốn Sổ Tay Cũ Nhặt Trong Bãi Rác');
+                }
+            } else if (!aborted) {
+                addLog(`💨 Loay hoay một hồi tại ${LOCATIONS[state.locationId].name} nhưng không kiếm được gì đáng kể.`, 'text-slate-400');
+            }
+            maybeTriggerEvent(0.28);
+            updateUI();
+        }
+
+        // ==========================================
+        // 10. HỆ THỐNG CÂU CÁ: NGÂM CẦN -> ĐẤU CÁ
+        // ==========================================
+        function getEquippedBaitObj() {
+            if (!state.eqBait) return null;
+            if (state.eqBait === 'moi_tu_tron') {
+                return { id: 'moi_tu_tron', name: state.customMix.name, tanh: state.customMix.tanh, them: state.customMix.them, thui: state.customMix.thui || 0 };
+            }
+            return ITEMS[state.eqBait];
+        }
+
+        function calcBiteChancePerSec() {
+            const loc = LOCATIONS[state.locationId];
+            const weather = WEATHERS[state.weatherIdx];
+            const season = SEASONS[state.seasonIdx];
+            const moon = getMoonPhase(state.day);
+            const isNight = (state.hour >= 18 || state.hour < 5);
+
+            let base = 6; // 6%/giây cơ bản
+            if (state.eqRod) base += (ITEMS[state.eqRod].luck || 0) * 0.25;
+            if (state.eqLine) base += (ITEMS[state.eqLine].sensitivity || 0) * 0.2;
+            if (state.inv.bam_mong_tay > 0) base += 3;
+
+            const bait = getEquippedBaitObj();
+            if (bait) base += 6;
+
+            // Ảnh hưởng của Tinh thần tới khả năng ngắm phao
+            const sanityMod = 0.62 + (state.sanity / state.maxSanity) * 0.56; // 0.62x -> 1.18x
+            base *= sanityMod;
+
+            // Thời tiết & Kỳ trăng
+            base *= weather.biteMod;
+            if (isNight) base *= moon.nightBite;
+            if (season.id === 'winter') base *= 0.82;
+
+            // Tụ ổ mồi & Nhấp cần
+            base += soakData.chum * 0.14 + soakData.twitchBonus;
+
+            return Math.min(48, Math.max(3, Math.round(base)));
+        }
+
+        function startFishing() {
+            if (soakData.active || combatData.active || mgData.active) return;
+            if (!state.eqRod || !state.eqLine) {
+                addLog('⚠️ Bạn chưa trang bị đủ Cần Câu và Dây & Lưỡi! Hãy vào Chế Tạo hoặc Tiệm Đồ Câu.', 'text-amber-300');
+                return;
+            }
+            if (!state.eqBait || (state.inv[state.eqBait] || 0) <= 0) {
+                addLog('⚠️ Chưa gắn mồi câu hoặc đã hết mồi! Hãy đi tìm mồi hoặc mở ô Mồi Câu để chọn.', 'text-amber-300');
+                return;
+            }
+            if (state.stamina < 6) {
+                addLog('⚠️ Thể lực cạn kiệt, không đủ sức quăng cần!', 'text-rose-400');
+                return;
+            }
+
+            // Tiêu hao 1 đơn vị mồi khi thả câu
+            consumeItem(state.eqBait, 1);
+            changeStamina(-3);
+
+            soakData = { active: true, seconds: 0, chum: 0, twitchBonus: 0 };
+            document.getElementById('soaking-panel').classList.remove('hidden');
+            updateSoakUI();
+            addLog(`🎣 Bạn vung ${ITEMS[state.eqRod].name} thả mồi xuống làn nước ${LOCATIONS[state.locationId].name}...`, 'text-cyan-300');
+
+            if (soakInterval) clearInterval(soakInterval);
+            soakInterval = setInterval(() => {
+                soakData.seconds++;
+                if (soakData.twitchBonus > 0) soakData.twitchBonus = Math.max(0, soakData.twitchBonus - 1);
+
+                const rate = calcBiteChancePerSec();
+                updateSoakUI();
+
+                // Kiểm tra cá cắn câu
+                if (Math.random() * 100 < rate) {
+                    clearInterval(soakInterval);
+                    soakInterval = null;
+                    soakData.active = false;
+                    document.getElementById('soaking-panel').classList.add('hidden');
+                    advanceTime(Math.max(10, Math.round(soakData.seconds * 1.5)));
+                    beginFishCombat();
+                    return;
+                }
+
+                // Ngâm quá lâu gây giảm tinh thần
+                if (soakData.seconds > 0 && soakData.seconds % 15 === 0) {
+                    changeSanity(-3);
+                    document.getElementById('soak-status-text').textContent = 'Phao đứng im phăng phắc, sự kiên nhẫn bắt đầu bào mòn...';
+                    updateUI();
+                }
+            }, 1000);
+        }
+
+        function updateSoakUI() {
+            const rate = calcBiteChancePerSec();
+            const focusPct = Math.round(62 + (state.sanity / state.maxSanity) * 56);
+            document.getElementById('soak-bite-rate').textContent = `${rate}%`;
+            document.getElementById('soak-timer').textContent = `${soakData.seconds}s`;
+            document.getElementById('soak-chum').textContent = `${soakData.chum}%`;
+            document.getElementById('soak-focus').textContent = `${focusPct}%`;
+        }
+
+        function soakAction(act) {
+            if (!soakData.active) return;
+            if (act === 'chum') {
+                const chumBait = ['cam_gao', 'bap_u_chua', 'moi_tu_tron', 'oc_buou', 'giun_dat'].find(id => (state.inv[id] || 0) > 0);
+                if (!chumBait) {
+                    document.getElementById('soak-status-text').textContent = 'Không còn cám/mồi trong túi để đánh xả ổ!';
+                    return;
+                }
+                consumeItem(chumBait, 1);
+                soakData.chum = Math.min(100, soakData.chum + 35);
+                document.getElementById('soak-status-text').textContent = `Đã bóp 1 nắm ${ITEMS[chumBait].name} ném xuống dụ cá tụ ổ!`;
+                updateSoakUI();
+                updateUI();
+            } else if (act === 'twitch') {
+                if (state.stamina < 2) return;
+                changeStamina(-1);
+                soakData.twitchBonus = Math.min(15, soakData.twitchBonus + 6);
+                document.getElementById('soak-status-text').textContent = 'Bạn khẽ nhấp đầu cần tạo sóng nước kích thích cá táp mồi!';
+                updateSoakUI();
+                updateUI();
+            } else if (act === 'cancel') {
+                clearInterval(soakInterval);
+                soakInterval = null;
+                soakData.active = false;
+                document.getElementById('soaking-panel').classList.add('hidden');
+                advanceTime(10);
+                state.skunkStreak++;
+                if (state.skunkStreak >= 3) {
+                    changeSanity(-5);
+                    addLog('😔 Thu cần tay trắng liên tiếp khiến bạn hơi nản lòng (-5 Tinh thần).', 'text-slate-400');
+                } else {
+                    addLog('↩️ Bạn thu cần lên kiểm tra lại mồi.', 'text-slate-400');
+                }
+                updateUI();
+            }
+        }
+
+        function pickFishByEcology() {
+            const loc = LOCATIONS[state.locationId];
+            const weather = WEATHERS[state.weatherIdx];
+            const moon = getMoonPhase(state.day);
+            const isNight = (state.hour >= 18 || state.hour < 5);
+            const bait = getEquippedBaitObj() || { tanh: 50, them: 50, thui: 20 };
+            const hasShrimpGear = (ITEMS[state.eqRod]?.shrimpBonus || ITEMS[state.eqLine]?.shrimpBonus);
+
+            let weightedPool = [];
+            loc.fishPool.forEach(fid => {
+                const f = FISH_DB[fid];
+                if (!f) return;
+                let w = 20;
+
+                // Khớp bộ 3 chỉ số: Tanh - Thơm - Thúi
+                const tanhDiff = Math.abs(f.prefTanh - (bait.tanh || 0));
+                const themDiff = Math.abs(f.prefThem - (bait.them || 0));
+                const thuiDiff = Math.abs((f.prefThui || 0) - (bait.thui || 0));
+                const baitMatch = Math.max(0.18, 1.85 - (tanhDiff + themDiff + thuiDiff) / 145);
+                w *= baitMatch;
+
+                // Cơ chế Câu Tôm chuyên biệt
+                if (f.isShrimp) {
+                    w *= hasShrimpGear ? 2.6 : 0.45;
+                }
+
+                // Cơ chế Sinh Vật Phá Mồi (Lòng tong, cua, bảy màu, bùi nhùi...)
+                if (f.isPest) {
+                    // Mồi quá thơm hoặc quá tanh ở vùng nông dễ thu hút cá phá mồi; xả ổ mạnh giúp xua bớt cá nhỏ
+                    if ((bait.them || 0) >= 65 && f.diff < 15) w *= 1.45;
+                    if (soakData.chum >= 60) w *= 0.55;
+                }
+
+                // Thời gian đi ăn (Ngày / Đêm)
+                if (f.activeTime === 'night' && isNight) w *= 1.8 * moon.nightBite;
+                else if (f.activeTime === 'day' && !isNight) w *= 1.5;
+                else if (f.activeTime !== 'any') w *= 0.45;
+
+                // Thời tiết ưa thích
+                if (f.prefWeather === weather.id) w *= 1.6;
+
+                // Xả ổ giúp tăng tỷ lệ gặp cá lớn
+                if (soakData.chum >= 50 && f.diff >= 50) w *= 1.6;
+
+                weightedPool.push({ fish: f, weight: Math.max(1, w) });
+            });
+
+            const totalW = weightedPool.reduce((s, x) => s + x.weight, 0);
+            let r = Math.random() * totalW;
+            for (const entry of weightedPool) {
+                if (r < entry.weight) return entry.fish;
+                r -= entry.weight;
+            }
+            return weightedPool[0].fish;
+        }
+
+        function beginFishCombat() {
+            const fish = pickFishByEcology();
+
+            // Sinh vật phá mồi có 45% cơ hội rỉa sạch mồi rồi chạy mất trước khi bạn kịp đóng cần!
+            if (fish.isPest && Math.random() < 0.45) {
+                changeSanity(-2);
+                addLog(`🦀 Phao nhấp nháy liên hồi nhưng giật lên thì trống trơn! Đám ${fish.name} đã rỉa sạch mồi của bạn (-2 Tinh thần).`, 'text-amber-400');
+                updateUI();
+                return;
+            }
+
+            const weight = +(fish.minW + Math.random() * (fish.maxW - fish.minW)).toFixed(2);
+            const startDist = Math.round(10 + fish.diff * 0.22);
+
+            combatData = {
+                active: true,
+                fish,
+                weight,
+                dist: startDist,
+                maxDist: startDist,
+                tension: 45,
+                reeling: false,
+                surgeTimer: 0,
+                surgeForce: 0
+            };
+
+            document.getElementById('combat-fish-tag').textContent = `${fish.rarity} • Táp mồi!`;
+            document.getElementById('combat-fish-title').textContent = fish.isShrimp
+                ? `Cần cong nhẹ nhịp đều! Có vẻ là Tôm đang ôm mồi...`
+                : `Bóng cá ghì cong cần! (${fish.diff >= 65 ? 'Lực kéo cực mạnh!' : 'Đang vùng vẫy'})`;
+            document.getElementById('fishing-combat-panel').classList.remove('hidden');
+            document.getElementById('fishing-combat-panel').classList.add('shake-anim');
+            setTimeout(() => document.getElementById('fishing-combat-panel').classList.remove('shake-anim'), 500);
+
+            if (combatInterval) clearInterval(combatInterval);
+            combatInterval = setInterval(combatTick, 100);
+        }
+
+        function setReeling(isReeling) {
+            combatData.reeling = isReeling;
+        }
+
+        function useCombatSkill() {
+            if (!combatData.active) return;
+            combatData.tension = Math.max(15, combatData.tension - 28);
+            combatData.dist = Math.min(combatData.maxDist + 3, combatData.dist + 1.2);
+            updateCombatUI();
+        }
+
+        function combatTick() {
+            if (!combatData.active) return;
+
+            const rodPower = ITEMS[state.eqRod]?.power || 15;
+            const lineStrength = ITEMS[state.eqLine]?.strength || 18;
+            const stamFactor = 0.65 + (state.stamina / state.maxStamina) * 0.5; // Thể lực ảnh hưởng sức kéo
+            const fishPower = combatData.fish.diff * (0.85 + combatData.weight * 0.04);
+
+            // Nhịp cá bứt tốc ngẫu nhiên
+            combatData.surgeTimer--;
+            if (combatData.surgeTimer <= 0) {
+                combatData.surgeTimer = Math.floor(12 + Math.random() * 18);
+                combatData.surgeForce = (Math.random() < 0.45) ? (fishPower * 0.14) : 0;
+            }
+
+            if (combatData.reeling) {
+                const pullSpeed = Math.max(0.25, ((rodPower * stamFactor) / Math.max(15, fishPower)) * 0.85);
+                combatData.dist -= pullSpeed;
+                const tensionRise = Math.max(2.2, (fishPower / Math.max(15, lineStrength)) * 3.4) + combatData.surgeForce * 0.4;
+                combatData.tension += tensionRise;
+            } else {
+                combatData.dist += (fishPower / 180) + combatData.surgeForce * 0.05;
+                combatData.tension -= 3.6;
+            }
+
+            // Kiểm tra đứt dây hoặc chùng lưỡi
+            if (combatData.tension >= 100) {
+                endFishCombat(false, '💥 ĐOÀNG! Dây cước quá căng đã nổ tung, cá mang theo lưỡi lặn mất!');
+                return;
+            }
+            if (combatData.tension <= 0 || combatData.dist > combatData.maxDist + 6) {
+                endFishCombat(false, '💨 Dây bị chùng khiến cá quẫy mạnh sẩy khỏi lưỡi câu!');
+                return;
+            }
+            if (combatData.dist <= 0) {
+                endFishCombat(true);
+                return;
+            }
+
+            updateCombatUI();
+        }
+
+        function updateCombatUI() {
+            const pct = Math.max(0, Math.min(100, Math.round((1 - combatData.dist / combatData.maxDist) * 100)));
+            const tens = Math.max(0, Math.min(100, Math.round(combatData.tension)));
+            document.getElementById('combat-dist-text').textContent = `${Math.max(0, combatData.dist).toFixed(1)}m`;
+            document.getElementById('combat-progress-pct').textContent = `${pct}%`;
+            document.getElementById('combat-progress-bar').style.width = `${pct}%`;
+            document.getElementById('combat-tension-pct').textContent = `${tens}%`;
+            document.getElementById('combat-tension-bar').style.width = `${tens}%`;
+        }
+
+        function endFishCombat(won, failMsg) {
+            if (combatInterval) clearInterval(combatInterval);
+            combatInterval = null;
+            combatData.active = false;
+            combatData.reeling = false;
+            document.getElementById('fishing-combat-panel').classList.add('hidden');
+
+            if (!won) {
+                state.skunkStreak++;
+                changeStamina(-4);
+                changeSanity(-4);
+                addLog(`${failMsg} (-4 Tinh thần)`, 'text-rose-400 font-semibold');
+                updateUI();
+                return;
+            }
+
+            // Lên hàng thành công!
+            state.skunkStreak = 0;
+            const f = combatData.fish;
+            const w = combatData.weight;
+            const val = Math.round(f.basePrice * (0.7 + w * 0.65));
+            const repGain = Math.max(1, Math.round(f.diff / 12));
+
+            changeStamina(-3);
+            changeSanity(8);
+            changeRep(repGain);
+
+            // Cập nhật Sổ Cá
+            if (!state.fishDex[f.id]) {
+                state.fishDex[f.id] = { count: 1, maxW: w };
+            } else {
+                state.fishDex[f.id].count++;
+                if (w > state.fishDex[f.id].maxW) state.fishDex[f.id].maxW = w;
+            }
+
+            const veh = VEHICLES.find(v => v.id === state.vehicleId) || VEHICLES[0];
+            if (state.fishBag.length < veh.bagCap) {
+                state.fishBag.push({ id: f.id, name: f.name, icon: f.icon, weight: w, value: val });
+                addLog(`🎉 LÊN HÀNG! Bạn đã khuất phục ${f.icon} ${f.name} nặng ${w}kg (Trị giá ~${formatMoney(val)}, +${repGain} Danh vọng, +8 Tinh thần)!`, 'text-emerald-300 font-bold');
+            } else {
+                addLog(`🎉 Bắt được ${f.icon} ${f.name} (${w}kg) nhưng giỏ cá (${veh.bagCap} con) đã đầy nên đành phóng sinh (+${repGain * 2} Danh vọng)!`, 'text-amber-300 font-bold');
+                changeRep(repGain);
+            }
+
+            maybeTriggerEvent(0.3);
+            updateUI();
+        }
+
+        // Cần cắm bờ thụ động
+        function checkSetLines() {
+            const ready = state.setLines.filter(sl => sl.locId === state.locationId && sl.timeLeft <= 0);
+            if (ready.length === 0) {
+                addLog('⏳ Cần cắm bờ chưa có cá dính, hãy đợi thêm một lúc nữa.', 'text-amber-200');
+                return;
+            }
+            const veh = VEHICLES.find(v => v.id === state.vehicleId) || VEHICLES[0];
+            let caughtNames = [];
+            ready.forEach(sl => {
+                const f = pickFishByEcology();
+                const w = +(f.minW + Math.random() * (f.maxW - f.minW) * 0.7).toFixed(2);
+                const val = Math.round(f.basePrice * (0.7 + w * 0.65));
+                if (state.fishBag.length < veh.bagCap) {
+                    state.fishBag.push({ id: f.id, name: f.name, icon: f.icon, weight: w, value: val });
+                }
+                if (!state.fishDex[f.id]) state.fishDex[f.id] = { count: 1, maxW: w };
+                else { state.fishDex[f.id].count++; if (w > state.fishDex[f.id].maxW) state.fishDex[f.id].maxW = w; }
+                caughtNames.push(`${f.name} (${w}kg)`);
+                sl.timeLeft = 3; // Reset chu kỳ 3 tiếng
+            });
+            changeSanity(5);
+            addLog(`🚩 Thăm cần cắm bờ thu được: ${caughtNames.join(', ')}!`, 'text-emerald-300 font-bold');
+            updateUI();
+        }
+
+        // ==========================================
+        // 11. BẢN ĐỒ ĐỊA DANH & DI CHUYỂN TỰ DO
+        // ==========================================
+        function renderMapModal() {
+            const curLoc = LOCATIONS[state.locationId];
+            const selLoc = LOCATIONS[state.selectedMapLoc] || curLoc;
+            const veh = VEHICLES.find(v => v.id === state.vehicleId) || VEHICLES[0];
+
+            const distDiff = Math.max(1, Math.abs(selLoc.dist - curLoc.dist) + (selLoc.id === curLoc.id ? 0 : 2));
+            const travelMins = selLoc.id === curLoc.id ? 0 : Math.max(8, Math.round(distDiff * 14 * veh.speedMult));
+            const stamCost = selLoc.id === curLoc.id ? 0 : Math.max(1, Math.round(distDiff * 1.6 * veh.stamCostMult));
+
+            let pinsHtml = '';
+            Object.values(LOCATIONS).forEach(loc => {
+                const isHere = loc.id === state.locationId;
+                const isSel = loc.id === selLoc.id;
+                const ringClass = isHere
+                    ? 'bg-rose-600 border-amber-300 text-white shadow-[0_0_12px_rgba(244,63,94,0.8)]'
+                    : isSel
+                        ? 'bg-amber-500 border-white text-slate-950 shadow-[0_0_12px_rgba(245,158,11,0.9)]'
+                        : 'bg-[#132a20]/95 border-emerald-500/70 text-emerald-100';
+
+                pinsHtml += `
+                    <button type="button" onclick="selectMapLocation('${loc.id}')"
+                        style="left: ${loc.x}%; top: ${loc.y}%; transform: translate(-50%, -50%);"
+                        class="absolute z-10 flex flex-col items-center group focus:outline-none">
+                        <span class="w-7 h-7 rounded-xl border-2 flex items-center justify-center text-sm font-bold ${ringClass}">
+                            ${isHere ? '🧍' : loc.icon}
+                        </span>
+                        <span class="mt-0.5 px-1.5 py-0.5 rounded text-[9px] font-bold whitespace-nowrap shadow ${isSel ? 'bg-amber-400 text-slate-950' : 'bg-[#0b1611]/90 text-slate-100 border border-emerald-900/70'}">
+                            ${loc.name}
+                        </span>
+                    </button>
+                `;
+            });
+
+            const fishNames = selLoc.fishPool.map(fid => FISH_DB[fid]?.name).filter(Boolean).join(', ');
+            const serviceBadges = [];
+            if (selLoc.services.includes('sell')) serviceBadges.push('💰 Thu mua cá');
+            if (selLoc.services.includes('tackle')) serviceBadges.push('🎣 Tiệm đồ câu');
+            if (selLoc.services.includes('food')) serviceBadges.push('🍜 Quán ăn');
+            if (selLoc.services.includes('grocery')) serviceBadges.push('🏪 Tạp hóa');
+            if (selLoc.services.includes('pharmacy')) serviceBadges.push('💊 Thuốc tây');
+            if (selLoc.services.includes('juice')) serviceBadges.push('🥤 Nước mía & dừa');
+            if (selLoc.services.includes('gas')) serviceBadges.push('⛽ Cây xăng lẻ');
+            if (selLoc.services.includes('orchard')) serviceBadges.push('🥭 Vườn trái cây');
+            if (selLoc.services.includes('lottery')) serviceBadges.push('🎱 Bà Sáu số đề');
+            if (selLoc.services.includes('vehicle')) serviceBadges.push('🛵 Bãi xe');
+
+            return `
+                <div class="space-y-3">
+                    <!-- Bản đồ vẽ tay địa hình sông nước, kênh rạch, đồng ruộng, rừng -->
+                    <div class="relative w-full h-72 rounded-2xl overflow-hidden border-2 border-[#6e583b] bg-[#d9ccb2] shadow-inner">
+                        <svg viewBox="0 0 400 300" class="absolute inset-0 w-full h-full pointer-events-none">
+                            <!-- Nền đất phù sa -->
+                            <rect width="400" height="300" fill="#dfd3b8"/>
+                            <!-- Rừng tre & Đầm lầy phía Tây Nam -->
+                            <circle cx="65" cy="220" r="55" fill="#9eb384" opacity="0.7"/>
+                            <circle cx="185" cy="265" r="50" fill="#8ca378" opacity="0.65"/>
+                            <!-- Cánh đồng & Ruộng lúa -->
+                            <rect x="35" y="115" width="135" height="75" rx="14" fill="#c5d19b" opacity="0.75"/>
+                            <!-- Sông cái & Kênh rạch -->
+                            <path d="M 160 0 Q 210 90 230 140 T 320 230 L 350 300 L 290 300 Q 250 220 190 155 T 120 0 Z" fill="#7ba7bc" opacity="0.85"/>
+                            <path d="M 0 75 Q 110 70 195 95" stroke="#7ba7bc" stroke-width="10" fill="none" opacity="0.8"/>
+                            <path d="M 225 145 Q 310 135 400 150" stroke="#7ba7bc" stroke-width="12" fill="none" opacity="0.8"/>
+                            <!-- Cầu Sắt Bình Lợi -->
+                            <line x1="275" y1="60" x2="315" y2="95" stroke="#5c4033" stroke-width="6" stroke-dasharray="4,2"/>
+                            <!-- Đường mòn liên xã -->
+                            <path d="M 95 65 L 180 55 L 220 115 L 305 145 L 210 205 L 140 175 Z" stroke="#b09b78" stroke-width="3" stroke-dasharray="5,4" fill="none"/>
+                        </svg>
+                        ${pinsHtml}
+                    </div>
+
+                    <!-- Thẻ thông tin địa điểm đang chọn -->
+                    <div class="bg-[#0c1914] p-3 rounded-2xl border border-emerald-800/60 space-y-2">
+                        <div class="flex items-center justify-between">
+                            <div class="font-extrabold text-sm text-amber-300">${selLoc.icon} ${selLoc.name}</div>
+                            <span class="text-[10px] px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800">
+                                ${selLoc.id === curLoc.id ? 'Đang đứng tại đây' : `~${travelMins} phút • -${stamCost} Thể lực`}
+                            </span>
+                        </div>
+                        <p class="text-[11px] text-slate-300">${selLoc.desc}</p>
+                        ${serviceBadges.length > 0 ? `<div class="flex flex-wrap gap-1">${serviceBadges.map(b => `<span class="text-[10px] bg-amber-950/70 text-amber-200 px-2 py-0.5 rounded border border-amber-700/40">${b}</span>`).join('')}</div>` : ''}
+                        <div class="text-[10px] text-slate-400"><strong class="text-emerald-300">Loài cá sinh sống:</strong> ${fishNames}</div>
+
+                        ${selLoc.id !== curLoc.id ? `
+                            <button type="button" onclick="travelToSelected()" class="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold py-2.5 rounded-xl text-xs shadow btn-press">
+                                ${veh.icon} Dùng ${veh.name} Khởi Hành Tới Đây
+                            </button>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        function selectMapLocation(locId) {
+            state.selectedMapLoc = locId;
+            document.getElementById('modal-body').innerHTML = renderMapModal();
+        }
+
+        function travelToSelected() {
+            const curLoc = LOCATIONS[state.locationId];
+            const targetLoc = LOCATIONS[state.selectedMapLoc];
+            if (!targetLoc || targetLoc.id === curLoc.id) return;
+
+            const veh = VEHICLES.find(v => v.id === state.vehicleId) || VEHICLES[0];
+            const outOfFuel = veh.usesFuel && state.fuel <= 0;
+            const activeVeh = outOfFuel ? VEHICLES[0] : veh;
+
+            const distDiff = Math.max(1, Math.abs(targetLoc.dist - curLoc.dist) + 2);
+            const travelMins = Math.max(8, Math.round(distDiff * 14 * activeVeh.speedMult));
+            const stamCost = Math.max(1, Math.round(distDiff * 1.6 * activeVeh.stamCostMult));
+            const fuelCost = activeVeh.usesFuel ? Math.max(4, distDiff * 3) : 0;
+
+            if (state.stamina < stamCost) {
+                addLog('⚠️ Không đủ thể lực để di chuyển quãng đường này!', 'text-rose-400');
+                closeModal();
+                return;
+            }
+
+            if (activeVeh.usesFuel) {
+                state.fuel = Math.max(0, state.fuel - fuelCost);
+            }
+
+            state.locationId = targetLoc.id;
+            changeStamina(-stamCost);
+            advanceTime(travelMins);
+            closeModal();
+            if (outOfFuel) {
+                addLog(`⛽ ${veh.name} đã cạn sạch xăng nên bạn phải dắt bộ từ ${curLoc.name} tới ${targetLoc.name} (-${stamCost} Thể lực, mất ${travelMins} phút).`, 'text-amber-300');
+            } else {
+                addLog(`${activeVeh.icon} Bạn dùng ${activeVeh.name} di chuyển từ ${curLoc.name} tới ${targetLoc.name} (-${stamCost} Thể lực${fuelCost > 0 ? `, -${fuelCost}% xăng` : ''}, mất ${travelMins} phút).`, 'text-sky-300');
+            }
+            maybeTriggerEvent(0.32);
+            updateUI();
+        }
+
+        // ==========================================
+        // 12. CHỢ, TIỆM ĐỒ CÂU, QUÁN ĂN, TẠP HÓA, XĂNG, THUỐC TÂY, VƯỜN CÂY & SỐ ĐỀ
+        // ==========================================
+        function renderShopModal() {
+            const loc = LOCATIONS[state.locationId];
+            const sv = loc.services || [];
+            if (sv.length === 0) return '<p class="text-slate-400">Khu vực hoang dã này không có hàng quán nào.</p>';
+
+            let html = `<div class="text-[11px] text-amber-200 bg-amber-950/40 p-2.5 rounded-xl border border-amber-800/40">Bạn đang giao dịch tại <strong>${loc.name}</strong>.</div>`;
+
+            // 1. Thu mua cá
+            if (sv.includes('sell')) {
+                const totalVal = state.fishBag.reduce((s, f) => s + f.value, 0);
+                html += `
+                    <div class="bg-[#0c1914] p-3 rounded-2xl border border-emerald-800/60 space-y-2">
+                        <div class="flex justify-between items-center">
+                            <span class="font-bold text-emerald-300">🐟 Vựa Thu Mua Cá Tươi (${state.fishBag.length} con)</span>
+                            <button type="button" onclick="sellAllFish()" ${state.fishBag.length === 0 ? 'disabled' : ''} class="bg-emerald-600 disabled:opacity-40 text-white font-bold px-3 py-1.5 rounded-xl text-xs btn-press">
+                                Bán hết (+${formatMoney(totalVal)})
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // 2. Cây Xăng Lẻ
+            if (sv.includes('gas')) {
+                const veh = VEHICLES.find(v => v.id === state.vehicleId) || VEHICLES[0];
+                html += `
+                    <div class="bg-[#0c1914] p-3 rounded-2xl border border-amber-700/60 space-y-2">
+                        <div class="flex justify-between items-center">
+                            <div class="font-bold text-amber-300 text-xs">⛽ Trạm Chiết Xăng Lẻ Ven Đường</div>
+                            <span class="text-[10px] text-slate-300">Bình xăng xe: <strong>${veh.usesFuel ? state.fuel + '%' : 'Xe không dùng xăng'}</strong></span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button type="button" onclick="refuelVehicle(50, 25000)" ${!veh.usesFuel || state.fuel >= 100 ? 'disabled' : ''} class="bg-amber-600 disabled:opacity-40 text-slate-950 font-bold py-2 px-2 rounded-xl text-[11px] btn-press">
+                                Đổ +50% Xăng (25.000đ)
+                            </button>
+                            <button type="button" onclick="buyShopItem('can_xang_le', 35000)" class="bg-slate-800 hover:bg-slate-700 text-amber-200 font-bold py-2 px-2 rounded-xl text-[11px] border border-amber-700/40 btn-press">
+                                Mua Chai Dự Phòng (35.000đ)
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // 3. Tiệm Thuốc Tây
+            if (sv.includes('pharmacy')) {
+                const medIds = ['thuoc_ha_sot', 'dau_gio_xanh', 'kem_chong_muoi', 'vitamin_b1'];
+                html += `<div class="space-y-1.5"><div class="font-bold text-rose-300 uppercase text-[11px]">💊 Nhà Thuốc Tây Bình An</div>`;
+                medIds.forEach(id => {
+                    const it = ITEMS[id];
+                    html += `
+                        <div class="flex items-center justify-between bg-[#0c1914] p-2.5 rounded-xl border border-slate-800">
+                            <div class="pr-2">
+                                <div class="font-bold text-white">${it.icon} ${it.name}</div>
+                                <div class="text-[10px] text-slate-400">${it.desc}</div>
+                            </div>
+                            <button type="button" onclick="buyShopItem('${id}', ${it.price})" class="shrink-0 bg-rose-700 hover:bg-rose-600 text-white font-bold px-2.5 py-1.5 rounded-lg text-[11px] btn-press">
+                                ${formatMoney(it.price)}
+                            </button>
+                        </div>
+                    `;
+                });
+                html += `</div>`;
+            }
+
+            // 4. Xe Nước Mía & Nước Dừa Tươi
+            if (sv.includes('juice')) {
+                const drinks = [
+                    { name: 'Ly Nước Mía Siêu Sạch Tắc Tươi', icon: '🥤', stam: 25, san: 14, price: 10000 },
+                    { name: 'Trái Dừa Xiêm Chặt Tươi Mát Lạnh', icon: '🥥', stam: 35, san: 20, price: 18000 }
+                ];
+                html += `<div class="space-y-1.5"><div class="font-bold text-lime-300 uppercase text-[11px]">🥤 Xe Nước Mía & Dừa Xiêm Giải Nhiệt</div>`;
+                drinks.forEach(d => {
+                    html += `
+                        <div class="flex items-center justify-between bg-[#0c1914] p-2.5 rounded-xl border border-slate-800">
+                            <div>
+                                <div class="font-bold text-white">${d.icon} ${d.name}</div>
+                                <div class="text-[10px] text-lime-300">+${d.stam} Thể lực • +${d.san} Tinh thần</div>
+                            </div>
+                            <button type="button" onclick="buyFood(${d.stam}, ${d.san}, ${d.price}, '${d.name}')" class="bg-lime-600 hover:bg-lime-500 text-slate-950 font-bold px-2.5 py-1.5 rounded-lg text-[11px] btn-press">
+                                ${formatMoney(d.price)}
+                            </button>
+                        </div>
+                    `;
+                });
+                html += `</div>`;
+            }
+
+            // 5. Vườn Trái Cây (Mini-game ăn trộm trái cây)
+            if (sv.includes('orchard')) {
+                html += `
+                    <div class="bg-[#0c1914] p-3 rounded-2xl border border-emerald-700/60 space-y-2">
+                        <div class="font-bold text-emerald-300 text-xs">🥭 Vườn Cây Ăn Trái Sum Suê</div>
+                        <p class="text-[11px] text-slate-300">Những chùm xoài cát, mận đỏ chín mọng treo lủng lẳng sát hàng rào. Bạn có thể mua đàng hoàng hoặc lẻn vào hái trộm lúc chủ vườn lơ là!</p>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button type="button" onclick="buyShopItem('trai_cay_vuon', 25000)" class="bg-emerald-700 hover:bg-emerald-600 text-white font-bold py-2 px-2 rounded-xl text-[11px] btn-press">
+                                🧺 Mua 1 Túi (25.000đ)
+                            </button>
+                            <button type="button" onclick="startOrchardStealMinigame()" class="bg-amber-600 hover:bg-amber-500 text-slate-950 font-extrabold py-2 px-2 rounded-xl text-[11px] btn-press">
+                                🥷 Lẻn Vào Hái Trộm!
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // 6. Bà Sáu Số Đề (Mini-game số đề)
+            if (sv.includes('lottery')) {
+                const curBet = state.lotteryBet;
+                html += `
+                    <div class="bg-[#0c1914] p-3 rounded-2xl border border-purple-700/60 space-y-2">
+                        <div class="flex justify-between items-center">
+                            <div class="font-bold text-purple-300 text-xs">🎱 Sạp Ghi Đề Chiều Bà Sáu</div>
+                            <span class="text-[10px] text-amber-300">Xổ lúc 16:00 • Ăn gấp 70 lần!</span>
+                        </div>
+                        <p class="text-[11px] text-slate-300">Chọn cặp số may mắn (00 - 99) từ giấc mơ câu cá đêm qua. Đúng 16h chiều sẽ tự động dò đài!</p>
+                        ${curBet ? `<div class="text-[11px] bg-purple-950/70 text-purple-200 p-2 rounded-xl border border-purple-700/50">🎫 Vé đang giữ: Số <strong>${curBet.number}</strong> • Cược <strong>${formatMoney(curBet.amount)}</strong> (Chờ 16:00 dò kết quả)</div>` : `
+                            <div class="grid grid-cols-3 gap-1.5">
+                                <input id="lotto-num" type="number" min="0" max="99" placeholder="Số 00-99" class="bg-slate-900 border border-slate-700 rounded-xl px-2 py-2 text-xs text-white text-center font-bold">
+                                <select id="lotto-amt" class="bg-slate-900 border border-slate-700 rounded-xl px-2 py-2 text-xs text-amber-300 font-bold">
+                                    <option value="10000">10.000đ</option>
+                                    <option value="20000">20.000đ</option>
+                                    <option value="50000">50.000đ</option>
+                                    <option value="100000">100.000đ</option>
+                                </select>
+                                <button type="button" onclick="placeLotteryBet()" class="bg-purple-600 hover:bg-purple-500 text-white font-extrabold rounded-xl text-xs btn-press">
+                                    Ghi Số!
+                                </button>
+                            </div>
+                        `}
+                    </div>
+                `;
+            }
+
+            // 7. Tạp hóa (Thuốc lá, hộp quẹt, mì tôm, Xì Tin, Number One, 2-4-7, bấm móng tay)
+            if (sv.includes('grocery')) {
+                const groceryIds = ['hop_quet', 'thuoc_la', 'mi_tom', 'xi_tin', 'number_one', 'tra_247', 'bam_mong_tay', 'thuoc_ha_sot'];
+                html += `<div class="space-y-1.5"><div class="font-bold text-cyan-300 uppercase text-[11px]">🏪 Tiệm Tạp Hóa Bình Dân</div>`;
+                groceryIds.forEach(id => {
+                    const it = ITEMS[id];
+                    const price = id === 'bam_mong_tay' ? 20000 : it.price;
+                    html += `
+                        <div class="flex items-center justify-between bg-[#0c1914] p-2.5 rounded-xl border border-slate-800">
+                            <div class="pr-2">
+                                <div class="font-bold text-white">${it.icon} ${it.name}</div>
+                                <div class="text-[10px] text-slate-400">${it.desc}</div>
+                            </div>
+                            <button type="button" onclick="buyShopItem('${id}', ${price})" class="shrink-0 bg-cyan-700 hover:bg-cyan-600 text-white font-bold px-2.5 py-1.5 rounded-lg text-[11px] btn-press">
+                                ${formatMoney(price)}
+                            </button>
+                        </div>
+                    `;
+                });
+                html += `</div>`;
+            }
+
+            // 3. Quán ăn & Nước giải khát
+            if (sv.includes('food')) {
+                const foods = [
+                    { name: 'Ly Trà Đá & Bánh Mì Thịt', icon: '🥖', stam: 35, san: 15, price: 20000 },
+                    { name: 'Tô Phở Bò Nóng Hổi', icon: '🍲', stam: 70, san: 25, price: 45000 },
+                    { name: 'Cơm Tấm Sườn Bì Chả & Cà Phê', icon: '🍛', stam: 100, san: 35, price: 65000 }
+                ];
+                html += `<div class="space-y-1.5"><div class="font-bold text-amber-300 uppercase text-[11px]">🍜 Quán Ăn Ven Đường</div>`;
+                foods.forEach((f, idx) => {
+                    html += `
+                        <div class="flex items-center justify-between bg-[#0c1914] p-2.5 rounded-xl border border-slate-800">
+                            <div>
+                                <div class="font-bold text-white">${f.icon} ${f.name}</div>
+                                <div class="text-[10px] text-emerald-300">+${f.stam} Thể lực • +${f.san} Tinh thần</div>
+                            </div>
+                            <button type="button" onclick="buyFood(${f.stam}, ${f.san}, ${f.price}, '${f.name}')" class="bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold px-2.5 py-1.5 rounded-lg text-[11px] btn-press">
+                                ${formatMoney(f.price)}
+                            </button>
+                        </div>
+                    `;
+                });
+                html += `</div>`;
+            }
+
+            // 4. Tiệm đồ câu & Mồi chuyên dụng
+            if (sv.includes('tackle')) {
+                const tackles = [
+                    { id: 'can_cau_tom', price: 110000 },
+                    { id: 'luoi_tom_nho', price: 45000 },
+                    { id: 'can_truc_dai', price: 150000 },
+                    { id: 'can_tam_vong', price: 420000 },
+                    { id: 'can_carbon', price: 1450000 },
+                    { id: 'cuoc_nylon', price: 65000 },
+                    { id: 'day_pe_xin', price: 380000 },
+                    { id: 'du_cau_dai', price: 180000 },
+                    { id: 'leu_bat', price: 320000 },
+                    { id: 'trun_chi', price: 15000, qty: 3 },
+                    { id: 'tim_gan_bam', price: 18000, qty: 3 },
+                    { id: 'cam_gao', price: 15000, qty: 3 },
+                    { id: 'bap_u_chua', price: 20000, qty: 3 },
+                    { id: 'trung_vit_thoi', price: 18000, qty: 2 },
+                    { id: 'mam_tom_u', price: 25000, qty: 2 }
+                ];
+                html += `<div class="space-y-1.5"><div class="font-bold text-emerald-300 uppercase text-[11px]">🎣 Tiệm Đồ Câu Lão Bảy</div>`;
+                tackles.forEach(t => {
+                    const it = ITEMS[t.id];
+                    const q = t.qty || 1;
+                    html += `
+                        <div class="flex items-center justify-between bg-[#0c1914] p-2.5 rounded-xl border border-slate-800">
+                            <div class="pr-2">
+                                <div class="font-bold text-white">${it.icon} ${it.name} ${q > 1 ? `(x${q})` : ''}</div>
+                                <div class="text-[10px] text-slate-400">${it.desc}</div>
+                            </div>
+                            <button type="button" onclick="buyShopItem('${t.id}', ${t.price}, ${q})" class="shrink-0 bg-emerald-700 hover:bg-emerald-600 text-white font-bold px-2.5 py-1.5 rounded-lg text-[11px] btn-press">
+                                ${formatMoney(t.price)}
+                            </button>
+                        </div>
+                    `;
+                });
+                html += `</div>`;
+            }
+
+            // 5. Bãi xe phương tiện
+            if (sv.includes('vehicle')) {
+                html += `<div class="space-y-1.5"><div class="font-bold text-sky-300 uppercase text-[11px]">🛵 Bãi Xe Cần Thủ</div>`;
+                VEHICLES.filter(v => v.price > 0).forEach(v => {
+                    const owned = state.vehicleId === v.id;
+                    html += `
+                        <div class="flex items-center justify-between bg-[#0c1914] p-2.5 rounded-xl border border-slate-800">
+                            <div class="pr-2">
+                                <div class="font-bold text-white">${v.icon} ${v.name}</div>
+                                <div class="text-[10px] text-slate-400">Giỏ: ${v.bagCap} con • Tốc độ: ${Math.round(100 / v.speedMult)}% • ${v.desc}</div>
+                            </div>
+                            <button type="button" onclick="buyVehicle('${v.id}', ${v.price})" ${owned ? 'disabled' : ''} class="shrink-0 bg-sky-600 hover:bg-sky-500 disabled:bg-slate-800 disabled:text-emerald-400 text-white font-bold px-2.5 py-1.5 rounded-lg text-[11px] btn-press">
+                                ${owned ? 'Đang dùng' : formatMoney(v.price)}
+                            </button>
+                        </div>
+                    `;
+                });
+                html += `</div>`;
+            }
+
+            return html;
+        }
+
+        function sellAllFish() {
+            if (state.fishBag.length === 0) return;
+            const total = state.fishBag.reduce((s, f) => s + f.value, 0);
+            const count = state.fishBag.length;
+            state.money += total;
+            state.fishBag = [];
+            if (state.locationId === 'cho_ben_cu') meetNpc('chi_ba', 4);
+            addLog(`💰 Bạn bán toàn bộ ${count} con cá trong giỏ thu về ${formatMoney(total)}!`, 'text-emerald-300 font-bold');
+            openModal('shop');
+            updateUI();
+        }
+
+        function buyShopItem(id, price, qty = 1) {
+            if (state.money < price) {
+                addLog('❌ Không đủ tiền mặt để mua món này!', 'text-rose-400');
+                return;
+            }
+            state.money -= price;
+            addItem(id, qty);
+            const it = ITEMS[id];
+            if (it.type === 'rod' && !state.eqRod) state.eqRod = id;
+            if (it.type === 'line' && !state.eqLine) state.eqLine = id;
+            if (state.locationId === 'cho_ben_cu' && (it.type === 'rod' || it.type === 'line')) meetNpc('lao_bay', 5);
+            addLog(`🛍️ Bạn đã mua ${qty > 1 ? `x${qty} ` : ''}${it.icon} ${it.name} (-${formatMoney(price)}).`, 'text-emerald-300');
+            openModal('shop');
+            updateUI();
+        }
+
+        function buyFood(stam, san, price, name) {
+            if (state.money < price) {
+                addLog('❌ Không đủ tiền để ăn uống!', 'text-rose-400');
+                return;
+            }
+            state.money -= price;
+            changeStamina(stam);
+            changeSanity(san);
+            advanceTime(20);
+            addLog(`🍽️ Bạn thưởng thức ${name} (+${stam} Thể lực, +${san} Tinh thần).`, 'text-amber-300');
+            openModal('shop');
+            updateUI();
+        }
+
+        function buyVehicle(vehId, price) {
+            if (state.money < price) {
+                addLog('❌ Chưa đủ tiền tậu chiếc xe này!', 'text-rose-400');
+                return;
+            }
+            state.money -= price;
+            state.vehicleId = vehId;
+            state.fuel = 100;
+            const v = VEHICLES.find(x => x.id === vehId);
+            addLog(`🎉 Chúc mừng! Bạn đã sắm ${v.icon} ${v.name} (Sức chứa giỏ: ${v.bagCap} con)!`, 'text-sky-300 font-bold');
+            openModal('shop');
+            updateUI();
+        }
+
+        function refuelVehicle(pct, price) {
+            if (state.money < price) {
+                addLog('❌ Không đủ tiền đổ xăng!', 'text-rose-400');
+                return;
+            }
+            state.money -= price;
+            state.fuel = Math.min(100, state.fuel + pct);
+            addLog(`⛽ Đã đổ thêm +${pct}% xăng vào bình (Hiện tại: ${state.fuel}%).`, 'text-amber-300');
+            openModal('shop');
+            updateUI();
+        }
+
+        function placeLotteryBet() {
+            const numRaw = document.getElementById('lotto-num')?.value;
+            const amt = parseInt(document.getElementById('lotto-amt')?.value || '10000', 10);
+            if (numRaw === '' || numRaw === null || isNaN(parseInt(numRaw, 10))) {
+                addLog('⚠️ Vui lòng nhập cặp số từ 00 đến 99!', 'text-amber-300');
+                return;
+            }
+            const n = Math.max(0, Math.min(99, parseInt(numRaw, 10)));
+            const numStr = String(n).padStart(2, '0');
+            if (state.money < amt) {
+                addLog('❌ Không đủ tiền mặt để ghi số đề!', 'text-rose-400');
+                return;
+            }
+            state.money -= amt;
+            const targetDay = state.hour >= 16 ? state.day + 1 : state.day;
+            state.lotteryBet = { number: numStr, amount: amt, day: targetDay };
+            addLog(`🎱 Bạn ghi con số "${numStr}" với mức cược ${formatMoney(amt)} tại sạp Bà Sáu (Chờ 16:00 dò kết quả).`, 'text-purple-300 font-bold');
+            openModal('shop');
+            updateUI();
+        }
+
+        function resolveDailyLottery() {
+            if (!state.lotteryBet) return;
+            const bet = state.lotteryBet;
+            state.lotteryBet = null;
+            const drawn = String(Math.floor(Math.random() * 100)).padStart(2, '0');
+            if (drawn === bet.number) {
+                const win = bet.amount * 70;
+                state.money += win;
+                changeSanity(50);
+                addLog(`🎊 NỔ ĐỀ RỒI! Giải đặc biệt chiều nay về đúng số ${drawn}! Bạn trúng lớn ${formatMoney(win)}!`, 'text-amber-300 font-extrabold');
+            } else {
+                changeSanity(-6);
+                addLog(`🎱 Kết quả xổ số 16:00 chiều nay về số ${drawn}, lệch mất con ${bet.number} của bạn (-6 Tinh thần).`, 'text-slate-400');
+            }
+        }
+
+        function startOrchardStealMinigame() {
+            closeModal();
+            if (Math.random() < 0.62) {
+                addItem('trai_cay_vuon', 2);
+                changeSanity(8);
+                advanceTime(15);
+                addLog('🥷 Nhanh tay lẹ mắt! Bạn lẻn vào vườn vặt trộm được 2x Túi Trái Cây Vườn tươi ngon mà không ai hay biết!', 'text-lime-300 font-bold');
+            } else {
+                changeStamina(-14);
+                changeSanity(-10);
+                advanceTime(25);
+                addLog('🐕 GÂU GÂU! Chó mực trong vườn phát hiện sủa vang trời, chủ vườn cầm chổi rượt bạn chạy bán sống bán chết (-14 Thể lực, -10 Tinh thần)!', 'text-rose-400 font-bold');
+            }
+            updateUI();
+        }
+
+        // ==========================================
+        // 13. CHẾ TẠO, TRỘN MỒI & BALO ĐỒ
+        // ==========================================
+        function renderCraftModal(filterCat = 'all') {
+            const unlockedList = RECIPES.filter(r => state.unlockedRecipes.includes(r.id));
+            const filtered = filterCat === 'all' ? unlockedList : unlockedList.filter(r => r.cat === filterCat);
+
+            const cats = [
+                { id: 'all', label: `Tất cả (${unlockedList.length})` },
+                { id: 'rod', label: '🎋 Cần' },
+                { id: 'line', label: '🪝 Dây' },
+                { id: 'bait', label: '🧪 Mồi' },
+                { id: 'food', label: '🍲 Ẩm thực' },
+                { id: 'gear', label: '⛺ Sinh tồn' }
+            ];
+
+            let html = `
+                <div class="flex items-center justify-between bg-[#0c1914] p-2.5 rounded-xl border border-emerald-900/60">
+                    <span class="text-[11px] text-emerald-300 font-bold">📜 Bí kíp đã lĩnh hội: ${unlockedList.length}/${RECIPES.length}</span>
+                    <span class="text-[10px] text-slate-400">Kết giao & khám phá để mở thêm</span>
+                </div>
+                <div class="flex gap-1 overflow-x-auto pb-1">
+                    ${cats.map(c => `
+                        <button type="button" onclick="document.getElementById('modal-body').innerHTML = renderCraftModal('${c.id}')"
+                            class="px-2.5 py-1 rounded-lg text-[10px] font-bold whitespace-nowrap border btn-press ${filterCat === c.id ? 'bg-emerald-600 text-white border-emerald-400' : 'bg-slate-900 text-slate-300 border-slate-700'}">
+                            ${c.label}
+                        </button>
+                    `).join('')}
+                </div>
+                <div class="space-y-2">
+            `;
+
+            if (filtered.length === 0) {
+                html += `<p class="text-center text-slate-400 py-4 text-[11px]">Chưa mở khóa công thức nào thuộc nhóm này. Hãy kết giao giang hồ, chặt cây ngộ đạo hoặc lục bãi rác tìm bí kíp!</p>`;
+            } else {
+                filtered.forEach(r => {
+                    const resItem = r.result === 'CAMPFIRE_ACTION'
+                        ? { icon: '🔥', name: 'Nhóm Lửa Trại (6 tiếng)' }
+                        : ITEMS[r.result];
+
+                    const canCraft = Object.entries(r.req).every(([k, v]) => (state.inv[k] || 0) >= v);
+                    const reqText = Object.entries(r.req).map(([k, v]) => {
+                        const have = state.inv[k] || 0;
+                        const color = have >= v ? 'text-emerald-300' : 'text-rose-400';
+                        return `<span class="${color}">${ITEMS[k]?.name || k} (${have}/${v})</span>`;
+                    }).join(' • ');
+
+                    html += `
+                        <div class="bg-[#0c1914] p-3 rounded-2xl border ${canCraft ? 'border-emerald-700/70' : 'border-slate-800'} space-y-1.5">
+                            <div class="flex items-center justify-between gap-2">
+                                <div class="font-bold text-white">${resItem.icon} ${resItem.name} ${r.qty > 1 ? `(x${r.qty})` : ''}</div>
+                                <button type="button" onclick="craftRecipe('${r.id}')" ${!canCraft ? 'disabled' : ''} class="shrink-0 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 disabled:text-slate-500 text-white font-bold px-3 py-1.5 rounded-xl text-[11px] btn-press">
+                                    ${r.result === 'CAMPFIRE_ACTION' ? 'Đốt lửa' : 'Chế tạo'}
+                                </button>
+                            </div>
+                            <p class="text-[10px] text-slate-400">${r.desc}</p>
+                            <div class="text-[10px] font-medium">Nguyên liệu: ${reqText}</div>
+                        </div>
+                    `;
+                });
+            }
+
+            html += `</div>`;
+            return html;
+        }
+
+        function craftRecipe(recipeId) {
+            const r = RECIPES.find(x => x.id === recipeId);
+            if (!r || !state.unlockedRecipes.includes(recipeId)) return;
+
+            const canCraft = Object.entries(r.req).every(([k, v]) => (state.inv[k] || 0) >= v);
+            if (!canCraft) {
+                addLog('❌ Chưa đủ nguyên liệu để chế tạo!', 'text-rose-400');
+                return;
+            }
+
+            if (r.result === 'CAMPFIRE_ACTION') {
+                const hasLighter = (state.inv.hop_quet > 0 || state.inv.danh_lua_tho > 0);
+                if (!hasLighter) {
+                    addLog('❌ Bạn cần có Hộp Quẹt Gas hoặc Dụng Cụ Đánh Lửa Kẽm mới nhóm được lửa trại!', 'text-rose-400');
+                    return;
+                }
+                Object.entries(r.req).forEach(([k, v]) => consumeItem(k, v));
+                state.campfireHours = Math.max(state.campfireHours, 6);
+                changeSanity(10);
+                advanceTime(15);
+                addLog('🔥 Bạn nhóm đống lửa trại bập bùng sưởi ấm và xua muỗi suốt 6 tiếng (+10 Tinh thần)!', 'text-amber-300 font-bold');
+                openModal('craft');
+                updateUI();
+                return;
+            }
+
+            Object.entries(r.req).forEach(([k, v]) => consumeItem(k, v));
+            addItem(r.result, r.qty);
+            advanceTime(20);
+
+            const it = ITEMS[r.result];
+            if (it.type === 'rod' && !state.eqRod) state.eqRod = r.result;
+            if (it.type === 'line' && !state.eqLine) state.eqLine = r.result;
+
+            addLog(`🔨 Chế tạo thành công ${r.qty}x ${it.icon} ${it.name}!`, 'text-emerald-300 font-bold');
+            openModal('craft');
+            updateUI();
+        }
+
+        function renderBaitMixModal() {
+            const baits = Object.keys(ITEMS).filter(k => ITEMS[k].type === 'bait' && (state.inv[k] || 0) > 0);
+            let html = `<div class="space-y-2"><div class="font-bold text-emerald-300 uppercase text-[11px]">🪱 Chọn Mồi Gắn Lưỡi Câu:</div>`;
+            if (baits.length === 0) {
+                html += `<p class="text-slate-400 text-[11px]">Túi mồi đang trống! Hãy đi tìm mồi ngoài đồng ruộng hoặc mua ở tiệm.</p>`;
+            } else {
+                baits.forEach(bid => {
+                    const it = bid === 'moi_tu_tron'
+                        ? { ...ITEMS[bid], name: state.customMix.name, tanh: state.customMix.tanh, them: state.customMix.them, thui: state.customMix.thui || 0 }
+                        : ITEMS[bid];
+                    const eq = state.eqBait === bid;
+                    html += `
+                        <div class="flex items-center justify-between bg-[#0c1914] p-2.5 rounded-xl border ${eq ? 'border-emerald-500' : 'border-slate-800'}">
+                            <div class="pr-2">
+                                <div class="font-bold text-white">${it.icon} ${it.name} <span class="text-emerald-400">(x${state.inv[bid]})</span></div>
+                                <div class="text-[10px] text-amber-300">Tanh: ${it.tanh} • Thơm: ${it.them} • Thúi: ${it.thui || 0}</div>
+                            </div>
+                            <button type="button" onclick="equipBait('${bid}')" class="bg-emerald-600 text-white font-bold px-2.5 py-1.5 rounded-lg text-[11px] btn-press">
+                                ${eq ? 'Đang gắn' : 'Gắn mồi'}
+                            </button>
+                        </div>
+                    `;
+                });
+            }
+            html += `</div>`;
+
+            const mixable = Object.keys(ITEMS).filter(k => ITEMS[k].type === 'bait' && k !== 'moi_tu_tron' && (state.inv[k] || 0) > 0);
+            html += `
+                <div class="bg-[#0c1914] p-3 rounded-2xl border border-amber-700/50 space-y-2 mt-2">
+                    <div class="font-bold text-amber-300 text-xs">🥣 Xưởng Nhồi Mồi Tự Do (Tanh - Thơm - Thúi)</div>
+                    <p class="text-[10px] text-slate-300">Phối hợp 2 loại nguyên liệu để tạo ra bài mồi có chỉ số Tanh / Thơm / Thúi khắc chế đúng loài cá mục tiêu.</p>
+                    ${mixable.length === 0 ? '<p class="text-[11px] text-slate-400">Cần có nguyên liệu mồi trong balo để phối trộn.</p>' : `
+                        <div class="grid grid-cols-2 gap-2">
+                            <select id="mix-ing-1" class="bg-slate-900 border border-slate-700 rounded-xl p-2 text-[11px] text-white">
+                                ${mixable.map(k => `<option value="${k}">${ITEMS[k].name} (x${state.inv[k]})</option>`).join('')}
+                            </select>
+                            <select id="mix-ing-2" class="bg-slate-900 border border-slate-700 rounded-xl p-2 text-[11px] text-white">
+                                ${mixable.map(k => `<option value="${k}">${ITEMS[k].name} (x${state.inv[k]})</option>`).join('')}
+                            </select>
+                        </div>
+                        <button type="button" onclick="mixCustomBait()" class="w-full bg-amber-600 hover:bg-amber-500 text-slate-950 font-extrabold py-2 rounded-xl text-xs btn-press">
+                            🥣 Nhồi Mồi Mới (Tạo 2 phần)
+                        </button>
+                    `}
+                </div>
+            `;
+            return html;
+        }
+
+        function mixCustomBait() {
+            const s1 = document.getElementById('mix-ing-1')?.value;
+            const s2 = document.getElementById('mix-ing-2')?.value;
+            if (!s1 || !s2) return;
+            if (s1 === s2 && (state.inv[s1] || 0) < 2) {
+                addLog('❌ Cần ít nhất 2 phần nếu trộn cùng một loại nguyên liệu!', 'text-rose-400');
+                return;
+            }
+            consumeItem(s1, 1);
+            consumeItem(s2, 1);
+            const i1 = ITEMS[s1], i2 = ITEMS[s2];
+            state.customMix = {
+                tanh: Math.min(100, Math.round((i1.tanh + i2.tanh) * 0.58)),
+                them: Math.min(100, Math.round((i1.them + i2.them) * 0.58)),
+                thui: Math.min(100, Math.round(((i1.thui || 0) + (i2.thui || 0)) * 0.62)),
+                name: `Mồi Trộn (${i1.name.split(' ')[0]} + ${i2.name.split(' ')[0]})`
+            };
+            addItem('moi_tu_tron', 2);
+            state.eqBait = 'moi_tu_tron';
+            addLog(`🥣 Bạn đã nhồi thành công 2 phần ${state.customMix.name} (Tanh: ${state.customMix.tanh}, Thơm: ${state.customMix.them}, Thúi: ${state.customMix.thui})!`, 'text-amber-300 font-bold');
+            openModal('baitmix');
+            updateUI();
+        }
+
+        function equipBait(bid) {
+            state.eqBait = bid;
+            openModal('baitmix');
+            updateUI();
+        }
+
+        function renderInventoryModal() {
+            const veh = VEHICLES.find(v => v.id === state.vehicleId) || VEHICLES[0];
+            let html = `
+                <div class="bg-[#0c1914] p-3 rounded-2xl border border-emerald-800/60">
+                    <div class="font-bold text-emerald-300 mb-1">🧺 Giỏ Cá Tươi (${state.fishBag.length}/${veh.bagCap} con)</div>
+                    ${state.fishBag.length === 0
+                        ? '<p class="text-[11px] text-slate-400">Giỏ cá đang trống rỗng.</p>'
+                        : `<div class="space-y-1 max-h-32 overflow-y-auto">${state.fishBag.map((f, i) => `
+                            <div class="flex justify-between items-center text-[11px] bg-slate-900/80 px-2 py-1 rounded">
+                                <span>${f.icon} ${f.name} (${f.weight}kg)</span>
+                                <span class="text-emerald-400 font-semibold">~${formatMoney(f.value)}</span>
+                            </div>`).join('')}</div>`
+                    }
+                </div>
+                <div class="font-bold text-amber-300 uppercase text-[11px]">🎒 Vật Phẩm & Trang Bị Trong Balo:</div>
+            `;
+
+            const entries = Object.entries(state.inv).filter(([_, q]) => q > 0);
+            if (entries.length === 0) {
+                html += '<p class="text-slate-400">Balo chưa có món đồ nào.</p>';
+            } else {
+                entries.forEach(([id, qty]) => {
+                    const it = ITEMS[id];
+                    if (!it) return;
+                    let actionBtn = '';
+                    if (it.type === 'rod') {
+                        const eq = state.eqRod === id;
+                        actionBtn = `<button type="button" onclick="equipGear('rod','${id}')" class="bg-amber-600 text-slate-950 font-bold px-2.5 py-1 rounded-lg text-[11px] btn-press">${eq ? 'Đang cầm' : 'Trang bị'}</button>`;
+                    } else if (it.type === 'line') {
+                        const eq = state.eqLine === id;
+                        actionBtn = `<button type="button" onclick="equipGear('line','${id}')" class="bg-sky-600 text-white font-bold px-2.5 py-1 rounded-lg text-[11px] btn-press">${eq ? 'Đang lắp' : 'Lắp dây'}</button>`;
+                    } else if (it.type === 'consumable') {
+                        actionBtn = `<button type="button" onclick="useConsumable('${id}')" class="bg-emerald-600 text-white font-bold px-2.5 py-1 rounded-lg text-[11px] btn-press">Sử dụng</button>`;
+                    } else if (id === 'can_cam_bo') {
+                        actionBtn = `<button type="button" onclick="deploySetLine()" class="bg-amber-700 text-white font-bold px-2.5 py-1 rounded-lg text-[11px] btn-press">Cắm bờ</button>`;
+                    }
+
+                    html += `
+                        <div class="flex items-center justify-between bg-[#0c1914] p-2.5 rounded-xl border border-slate-800">
+                            <div class="pr-2">
+                                <div class="font-bold text-white">${it.icon} ${it.name} <span class="text-emerald-400">(x${qty})</span></div>
+                                <div class="text-[10px] text-slate-400">${it.desc}</div>
+                            </div>
+                            ${actionBtn}
+                        </div>
+                    `;
+                });
+            }
+            return html;
+        }
+
+        function equipGear(slot, id) {
+            if (slot === 'rod') state.eqRod = id;
+            if (slot === 'line') state.eqLine = id;
+            openModal('inventory');
+            updateUI();
+        }
+
+        function deploySetLine() {
+            if ((state.inv.can_cam_bo || 0) <= 0) return;
+            consumeItem('can_cam_bo', 1);
+            state.setLines.push({ locId: state.locationId, timeLeft: 2 });
+            addLog(`🚩 Bạn đã cắm 1 bộ cần cắm bờ tại ${LOCATIONS[state.locationId].name}. Sau 2 tiếng hãy quay lại thăm cần!`, 'text-amber-300');
+            openModal('inventory');
+            updateUI();
+        }
+
+        function useConsumable(id) {
+            if ((state.inv[id] || 0) <= 0) return;
+
+            if (id === 'thuoc_la') {
+                const hasLighter = (state.inv.hop_quet > 0 || state.inv.danh_lua_tho > 0);
+                if (!hasLighter) {
+                    addLog('❌ Bạn rút điếu thuốc ra nhưng tìm mãi không thấy hộp quẹt để châm lửa!', 'text-rose-400');
+                    return;
+                }
+                consumeItem('thuoc_la', 1);
+                changeSanity(18);
+                changeStamina(-3);
+                addLog('🚬 Bạn bật hộp quẹt rít một hơi thuốc lá nhả khói, đầu óc thư thái hẳn (+18 Tinh thần, -3 Thể lực).', 'text-cyan-300');
+            } else if (id === 'mi_tom') {
+                consumeItem('mi_tom', 1);
+                changeStamina(22);
+                changeSanity(5);
+                addLog('🍜 Bạn ăn vội gói mì tôm (+22 Thể lực, +5 Tinh thần).', 'text-amber-300');
+            } else if (id === 'xi_tin') {
+                consumeItem('xi_tin', 1);
+                changeStamina(18);
+                changeSanity(12);
+                addLog('🥤 Làm một ngụm Xì Tin dâu mát lạnh tỉnh cả người (+18 Thể lực, +12 Tinh thần).', 'text-rose-300');
+            } else if (id === 'number_one') {
+                consumeItem('number_one', 1);
+                changeStamina(25);
+                changeSanity(6);
+                addLog('⚡ Tu một hơi Number One tràn trề năng lượng (+25 Thể lực, +6 Tinh thần).', 'text-amber-300');
+            } else if (id === 'tra_247') {
+                consumeItem('tra_247', 1);
+                changeStamina(14);
+                changeSanity(15);
+                addLog('🍵 Uống chai Trà Xanh 2-4-7 giải nhiệt sảng khoái (+14 Thể lực, +15 Tinh thần).', 'text-emerald-300');
+            } else if (id === 'thuoc_ha_sot') {
+                consumeItem('thuoc_ha_sot', 1);
+                state.hasDengue = false;
+                changeStamina(20);
+                changeSanity(10);
+                addLog('💊 Bạn uống thuốc hạ sốt và nghỉ ngơi, cơn sốt xuất huyết đã dứt hẳn!', 'text-emerald-300 font-bold');
+            } else if (id === 'dau_gio_xanh') {
+                consumeItem('dau_gio_xanh', 1);
+                state.mosquitoRepelHours = Math.max(state.mosquitoRepelHours, 6);
+                changeSanity(10);
+                addLog('🧴 Bạn thoa Dầu Gió Xanh ấm áp khắp người, xua tan sương lạnh và muỗi trong 6 tiếng (+10 Tinh thần).', 'text-emerald-300');
+            } else if (id === 'kem_chong_muoi') {
+                consumeItem('kem_chong_muoi', 1);
+                state.mosquitoRepelHours = Math.max(state.mosquitoRepelHours, 8);
+                addLog('🦟 Bạn thoa Kem Xua Muỗi Soffell thơm dịu, không lo bị muỗi sốt xuất huyết chích trong 8 tiếng!', 'text-emerald-300');
+            } else if (id === 'vitamin_b1') {
+                consumeItem('vitamin_b1', 1);
+                changeStamina(35);
+                state.hoursAwake = Math.max(0, state.hoursAwake - 4);
+                addLog('🧪 Uống Vitamin B1 giúp cơ thể phục hồi nhanh chóng (+35 Thể lực, giảm mệt mỏi).', 'text-cyan-300');
+            } else if (id === 'can_xang_le') {
+                const veh = VEHICLES.find(v => v.id === state.vehicleId) || VEHICLES[0];
+                if (!veh.usesFuel) {
+                    addLog('❌ Bạn đang đi xe không dùng xăng!', 'text-amber-300');
+                    return;
+                }
+                consumeItem('can_xang_le', 1);
+                state.fuel = Math.min(100, state.fuel + 45);
+                addLog(`⛽ Bạn châm chai xăng dự phòng vào bình (Mức xăng: ${state.fuel}%).`, 'text-amber-300');
+            } else if (id === 'trai_cay_vuon') {
+                consumeItem('trai_cay_vuon', 1);
+                changeStamina(20);
+                changeSanity(14);
+                addLog('🥭 Bạn ăn trái cây vườn ngọt lịm mát ruột (+20 Thể lực, +14 Tinh thần).', 'text-lime-300');
+            } else if (id === 'chao_ca_bi_truyen') {
+                consumeItem('chao_ca_bi_truyen', 1);
+                state.hasDengue = false;
+                changeStamina(65);
+                changeSanity(40);
+                addLog('🍲 Bạn húp trọn nồi Cháo Cá Lóc Rau Đắng nóng hổi, giải cảm và hồi phục sung mãn (+65 Thể lực, +40 Tinh thần)!', 'text-emerald-300 font-bold');
+            } else if (ITEMS[id] && (ITEMS[id].stamGain || ITEMS[id].sanGain)) {
+                const it = ITEMS[id];
+                consumeItem(id, 1);
+                if (it.curesDengue) state.hasDengue = false;
+                changeStamina(it.stamGain || 0);
+                changeSanity(it.sanGain || 0);
+                addLog(`${it.icon} Bạn sử dụng ${it.name} (+${it.stamGain || 0} Thể lực, +${it.sanGain || 0} Tinh thần${it.curesDengue ? ', giải sốt xuất huyết' : ''}).`, 'text-emerald-300 font-semibold');
+            }
+
+            openModal('inventory');
+            updateUI();
+        }
+
+        // ==========================================
+        // 14. SỔ CÁ, GIANG HỒ & CÀI ĐẶT / NGỦ NGHỈ
+        // ==========================================
+        function renderFishDexModal() {
+            const allFish = Object.values(FISH_DB);
+            const caughtCount = Object.keys(state.fishDex).length;
+            let html = `<div class="text-xs font-bold text-emerald-300 mb-2">Đã khám phá: ${caughtCount}/${allFish.length} loài thủy sản sông nước</div>`;
+            html += `<div class="grid grid-cols-1 gap-2">`;
+            allFish.forEach(f => {
+                const rec = state.fishDex[f.id];
+                const tipped = state.revealedFishTips.includes(f.id);
+                const known = rec || tipped;
+                html += `
+                    <div class="p-2.5 rounded-xl border ${rec ? 'bg-[#0c1914] border-emerald-800/60' : tipped ? 'bg-cyan-950/30 border-cyan-800/50' : 'bg-slate-900/50 border-slate-800 opacity-60'} flex items-center justify-between">
+                        <div>
+                            <div class="font-bold text-white">${known ? f.icon : '❓'} ${known ? f.name : 'Loài thủy sản bí ẩn'} <span class="text-[10px] ${f.isPest ? 'text-rose-400' : f.isShrimp ? 'text-cyan-300' : 'text-amber-300'}">[${f.rarity}]</span></div>
+                            <div class="text-[10px] text-slate-400">${known ? `Ưa thích: Tanh ${f.prefTanh} / Thơm ${f.prefThem} / Thúi ${f.prefThui || 0} • ${f.activeTime === 'night' ? 'Ban đêm' : f.activeTime === 'day' ? 'Ban ngày' : 'Cả ngày'}` : 'Kết giao giang hồ để dò hỏi tập tính loài này'}</div>
+                        </div>
+                        <div class="text-right text-[10px]">
+                            ${rec ? `<div class="text-emerald-300 font-bold">Kỷ lục: ${rec.maxW}kg</div><div class="text-slate-400">Đã bắt: ${rec.count}</div>` : tipped ? '<span class="text-cyan-300 font-semibold">Đã biết tập tính</span>' : '<span class="text-slate-500">Chưa bắt được</span>'}
+                        </div>
+                    </div>
+                `;
+            });
+            html += `</div>`;
+            return html;
+        }
+
+        function renderSocialModal() {
+            const metList = NPCS.filter(n => state.metNpcs.includes(n.id));
+            if (metList.length === 0) {
+                return `
+                    <div class="bg-[#0c1914] p-4 rounded-2xl border border-slate-800 text-center space-y-1.5">
+                        <div class="text-2xl">🌫️</div>
+                        <div class="font-bold text-slate-200 text-xs">Chưa Kết Giao Nhân Mạch Nào</div>
+                        <p class="text-[11px] text-slate-400">Hãy đi dạo bờ sông, ghé Chợ Bến Cũ giao dịch hoặc gặp gỡ mọi người qua các sự kiện đường phố để mở khóa nhân mạch và bí mật giang hồ!</p>
+                    </div>
+                `;
+            }
+
+            return metList.map(n => {
+                const aff = state.npcAffinity[n.id] || 0;
+                const msHtml = (n.milestones || []).map(m => {
+                    const done = state.claimedMilestones.includes(m.id);
+                    return `
+                        <div class="text-[10px] flex items-center justify-between px-2 py-1 rounded ${done ? 'bg-emerald-950/60 text-emerald-300' : 'bg-slate-900/80 text-slate-400'}">
+                            <span>${done ? '✅' : '🔒'} Mốc ${m.req} điểm: ${done ? m.label : 'Bí mật chưa mở khóa'}</span>
+                        </div>
+                    `;
+                }).join('');
+
+                return `
+                    <div class="bg-[#0c1914] p-3 rounded-2xl border border-slate-800 space-y-2">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2.5">
+                                <span class="text-2xl">${n.icon}</span>
+                                <div>
+                                    <div class="font-bold text-white">${n.name} <span class="text-[10px] text-emerald-300">(${n.role})</span></div>
+                                    <div class="text-[10px] text-slate-400">${n.desc}</div>
+                                </div>
+                            </div>
+                            <div class="text-right shrink-0">
+                                <div class="text-[10px] text-slate-400">Thân thiết</div>
+                                <div class="font-bold text-amber-300">${aff} điểm</div>
+                            </div>
+                        </div>
+                        <div class="space-y-1 pt-1 border-t border-slate-800/80">${msHtml}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderSettingsModal() {
+            return `
+                <div class="space-y-3">
+                    <div class="bg-[#0c1914] p-3 rounded-2xl border border-emerald-800/60 space-y-2">
+                        <div class="font-bold text-cyan-300">🛌 Nghỉ Ngơi & Ngủ Lại Sức</div>
+                        <p class="text-[11px] text-slate-300">Ngủ một giấc 6 tiếng để xóa trạng thái thức đêm, hồi phục Thể lực và Tinh thần. (Có lều bạt hoặc ngủ ở khu chợ/quán sẽ hồi phục tốt hơn).</p>
+                        <button type="button" onclick="sleepAction()" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 rounded-xl text-xs btn-press">
+                            😴 Ngủ Nghỉ 6 Tiếng
+                        </button>
+                    </div>
+
+                    <div class="bg-[#0c1914] p-3 rounded-2xl border border-rose-900/50 space-y-2">
+                        <div class="font-bold text-rose-300">🔄 Chơi Lại Hành Trình Mới (Roguelike)</div>
+                        <p class="text-[11px] text-slate-400">Xóa dữ liệu hiện tại để bắt đầu lại từ hai bàn tay trắng.</p>
+                        <button type="button" onclick="resetGame()" class="w-full bg-rose-700 hover:bg-rose-600 text-white font-bold py-2.5 rounded-xl text-xs btn-press">
+                            Khởi Đầu Lại Từ Đầu
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function sleepAction() {
+            const loc = LOCATIONS[state.locationId];
+            const safeSpot = loc.services.length > 0 || state.inv.leu_bat > 0 || state.campfireHours > 0;
+            state.hoursAwake = 0;
+            changeStamina(safeSpot ? 55 : 30);
+            changeSanity(safeSpot ? 45 : 25);
+            advanceTime(360);
+            closeModal();
+            addLog(safeSpot
+                ? '😴 Bạn đánh một giấc ngủ ngon lành trong chỗ kín gió, tỉnh dậy tràn đầy sinh lực (+55 Thể lực, +45 Tinh thần)!'
+                : '😴 Bạn chợp mắt ngoài bãi đất trống, tuy hơi sương gió nhưng cũng đỡ mệt (+30 Thể lực, +25 Tinh thần).', 'text-indigo-300 font-bold');
+            updateUI();
+        }
+
+        function resetGame() {
+            stopAllActiveScenes();
+            localStorage.removeItem('can_thu_du_ky_save');
+            state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+            closeModal();
+            document.getElementById('log-container').innerHTML = '';
+            addLog('🌅 Một buổi sáng tinh mơ tại Kênh Bà Chiểu. Bạn bắt đầu hành trình cần thủ từ hai bàn tay trắng!', 'text-emerald-300 font-bold');
+            updateUI();
+        }
+
+        // ==========================================
+        // 15. SỰ KIỆN NGẪU NHIÊN & XỔ SỐ
+        // ==========================================
+        function maybeTriggerEvent(chance) {
+            if (Math.random() > chance) return;
+            const ev = RANDOM_EVENTS[Math.floor(Math.random() * RANDOM_EVENTS.length)];
+            document.getElementById('ev-icon').textContent = ev.icon;
+            document.getElementById('ev-tag').textContent = ev.tag;
+            document.getElementById('ev-title').textContent = ev.title;
+            document.getElementById('ev-desc').textContent = ev.desc;
+
+            const box = document.getElementById('ev-choices');
+            box.innerHTML = '';
+            ev.choices.forEach(c => {
+                const disabled = c.reqMoney && state.money < c.reqMoney;
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.disabled = disabled;
+                btn.className = 'w-full text-left px-3.5 py-2.5 rounded-xl font-bold text-xs bg-emerald-800/80 hover:bg-emerald-700 disabled:opacity-40 text-white border border-emerald-600/50 btn-press';
+                btn.textContent = c.text;
+                btn.onclick = () => {
+                    document.getElementById('event-modal').classList.add('hidden');
+                    c.action();
+                    updateUI();
+                };
+                box.appendChild(btn);
+            });
+
+            document.getElementById('event-modal').classList.remove('hidden');
+        }
+
+        function buyLottery(count) {
+            const cost = count * 10000;
+            if (state.money < cost) return;
+            state.money -= cost;
+            modAffinity('di_sau', count * 2);
+
+            const roll = Math.random();
+            if (roll < 0.015 * count) {
+                state.money += 5000000;
+                changeSanity(40);
+                addLog('🎊 TRÚNG ĐỘC ĐẮC! Tờ vé số của Dì Sáu nổ giải đặc biệt 5.000.000đ! Đổi đời rồi!', 'text-amber-300 font-extrabold');
+            } else if (roll < 0.22 * count) {
+                const prize = 100000;
+                state.money += prize;
+                changeSanity(15);
+                addLog(`🎉 May mắn! Vé số của Dì Sáu trúng giải khuyến khích ${formatMoney(prize)}!`, 'text-emerald-300 font-bold');
+            } else {
+                addLog(`🎫 Bạn mua ${count} tờ vé số ủng hộ Dì Sáu. Chiều dò thì trật lất, coi như làm việc thiện!`, 'text-slate-300');
+            }
+        }
+
+        function duelBinhMom() {
+            if (state.money < 30000) return;
+            const myScore = (ITEMS[state.eqRod]?.luck || 5) + (state.sanity * 0.3) + Math.random() * 40;
+            const oppScore = 35 + Math.random() * 40;
+            advanceTime(45);
+            if (myScore >= oppScore) {
+                state.money += 30000;
+                changeRep(5);
+                changeSanity(12);
+                addLog('🏆 Bạn giật cá liên tục thắng kèo Bình "Móm", nhận 30.000đ tiền cà phê và +5 Danh vọng!', 'text-emerald-300 font-bold');
+            } else {
+                state.money -= 30000;
+                changeSanity(-5);
+                addLog('😅 Hôm nay Bình "Móm" lên cá quá đỏ, bạn thua kèo mất 30.000đ tiền nước.', 'text-amber-300');
+            }
+        }
+
+        function loseRandomBait() {
+            const baits = Object.keys(ITEMS).filter(k => ITEMS[k].type === 'bait' && (state.inv[k] || 0) > 0);
+            if (baits.length > 0) {
+                const pick = baits[Math.floor(Math.random() * baits.length)];
+                consumeItem(pick, 1);
+                addLog(`💨 Cơn gió lốc hất đổ hộp mồi làm mất 1x ${ITEMS[pick].name}!`, 'text-rose-400');
+            } else {
+                addLog('💨 Gió thổi tung cát bụi mù mịt nhưng túi bạn trống trơn nên không mất gì.', 'text-slate-400');
+            }
+        }
+
+        // ==========================================
+        // 16. TIỆN ÍCH UI, MODAL & LƯU GAME
+        // ==========================================
+        function openModal(type) {
+            const modal = document.getElementById('main-modal');
+            const title = document.getElementById('modal-title');
+            const body = document.getElementById('modal-body');
+
+            if (type === 'map') {
+                state.selectedMapLoc = state.locationId;
+                title.textContent = '🗺️ Bản Đồ Sông Nước & Đồng Quê';
+                body.innerHTML = renderMapModal();
+            } else if (type === 'shop') {
+                title.textContent = `🏪 Chợ & Tiệm - ${LOCATIONS[state.locationId].name}`;
+                body.innerHTML = renderShopModal();
+            } else if (type === 'craft') {
+                title.textContent = '🔨 Chế Tạo Cần Câu & Sinh Tồn';
+                body.innerHTML = renderCraftModal();
+            } else if (type === 'baitmix') {
+                title.textContent = '🥣 Chọn Mồi & Phối Mồi Tự Do';
+                body.innerHTML = renderBaitMixModal();
+            } else if (type === 'inventory') {
+                title.textContent = '🎒 Balo Đồ & Giỏ Cá';
+                body.innerHTML = renderInventoryModal();
+            } else if (type === 'fishdex') {
+                title.textContent = '📖 Sổ Tay Thủy Sản';
+                body.innerHTML = renderFishDexModal();
+            } else if (type === 'social') {
+                title.textContent = '🤝 Nhân Mạch Giang Hồ';
+                body.innerHTML = renderSocialModal();
+            } else if (type === 'settings') {
+                title.textContent = '⚙️ Nghỉ Ngơi & Thiết Lập';
+                body.innerHTML = renderSettingsModal();
+            }
+
+            modal.classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('main-modal').classList.add('hidden');
+        }
+
+        function addItem(id, qty = 1) {
+            state.inv[id] = (state.inv[id] || 0) + qty;
+        }
+
+        function consumeItem(id, qty = 1) {
+            if (!state.inv[id]) return;
+            state.inv[id] = Math.max(0, state.inv[id] - qty);
+        }
+
+        function formatMoney(n) {
+            return n.toLocaleString('vi-VN') + ' đ';
+        }
+
+        function addLog(text, colorClass = 'text-slate-200') {
+            const hh = String(state.hour).padStart(2, '0');
+            const mm = String(state.minute).padStart(2, '0');
+            state.logs.push({ time: `${hh}:${mm}`, text, colorClass });
+            if (state.logs.length > 50) state.logs.shift();
+            renderLogs();
+        }
+
+        function renderLogs() {
+            const container = document.getElementById('log-container');
+            container.innerHTML = state.logs.map(l => `
+                <div class="bg-[#0b1712]/90 border border-emerald-950/80 rounded-xl px-3 py-2 text-xs leading-relaxed ${l.colorClass}">
+                    <span class="font-mono text-[10px] text-slate-500 mr-1">[${l.time}]</span> ${l.text}
+                </div>
+            `).join('');
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function updateUI() {
+            const season = SEASONS[state.seasonIdx];
+            const weather = WEATHERS[state.weatherIdx];
+            const moon = getMoonPhase(state.day);
+            const loc = LOCATIONS[state.locationId];
+            const veh = VEHICLES.find(v => v.id === state.vehicleId) || VEHICLES[0];
+
+            document.getElementById('ui-day').textContent = `Ngày ${state.day}`;
+            document.getElementById('ui-season').textContent = `${season.icon} ${season.name}`;
+            document.getElementById('ui-moon').textContent = `${moon.icon} ${moon.name}`;
+            document.getElementById('ui-weather').textContent = `${weather.icon} ${weather.name}`;
+
+            document.getElementById('ui-money').textContent = formatMoney(state.money);
+            document.getElementById('ui-rep').textContent = `${state.rep}`;
+            document.getElementById('ui-fuel-label').textContent = veh.usesFuel ? `Xăng: ${state.fuel}%` : 'Phương tiện';
+            document.getElementById('ui-vehicle').textContent = `${veh.icon} ${veh.name}`;
+
+            document.getElementById('ui-stamina-text').textContent = `${state.stamina}/${state.maxStamina}`;
+            document.getElementById('ui-stamina-bar').style.width = `${(state.stamina / state.maxStamina) * 100}%`;
+            document.getElementById('ui-sanity-text').textContent = `${state.sanity}/${state.maxSanity}`;
+            document.getElementById('ui-sanity-bar').style.width = `${(state.sanity / state.maxSanity) * 100}%`;
+
+            document.getElementById('ui-loc-icon').textContent = loc.icon;
+            document.getElementById('ui-loc-name').textContent = loc.name;
+            document.getElementById('ui-loc-desc').textContent = loc.desc;
+            document.getElementById('ui-clock').textContent = `${String(state.hour).padStart(2, '0')}:${String(state.minute).padStart(2, '0')}`;
+
+            // Hiện nút Chợ & Tiệm khi khu vực có dịch vụ
+            const shopBtn = document.getElementById('btn-top-shop');
+            if (loc.services && loc.services.length > 0) shopBtn.classList.remove('hidden');
+            else shopBtn.classList.add('hidden');
+
+            // Trang bị nhanh
+            document.getElementById('ui-eq-rod').textContent = state.eqRod ? ITEMS[state.eqRod].name : 'Tay Không';
+            document.getElementById('ui-eq-line').textContent = state.eqLine ? ITEMS[state.eqLine].name : 'Chưa có';
+
+            const baitObj = getEquippedBaitObj();
+            const baitQty = state.eqBait ? (state.inv[state.eqBait] || 0) : 0;
+            document.getElementById('ui-eq-bait').textContent = (baitObj && baitQty > 0) ? `${baitObj.name} (${baitQty})` : 'Chưa gắn mồi';
+
+            // Cảnh báo sinh tồn
+            const alerts = [];
+            if (state.campfireHours > 0) alerts.push(`<span class="text-[10px] bg-amber-900/70 text-amber-200 px-2 py-0.5 rounded-md border border-amber-600/50">🔥 Lửa trại (${state.campfireHours}h)</span>`);
+            if (state.mosquitoRepelHours > 0) alerts.push(`<span class="text-[10px] bg-emerald-900/70 text-emerald-200 px-2 py-0.5 rounded-md border border-emerald-600/50">🦟 Chống muỗi (${state.mosquitoRepelHours}h)</span>`);
+            if (state.lotteryBet) alerts.push(`<span class="text-[10px] bg-purple-900/70 text-purple-200 px-2 py-0.5 rounded-md border border-purple-500/50">🎱 Vé số ${state.lotteryBet.number}</span>`);
+            if (state.hasDengue) alerts.push(`<span class="text-[10px] bg-rose-900/80 text-rose-200 px-2 py-0.5 rounded-md border border-rose-500">🤒 Sốt xuất huyết</span>`);
+            if (state.hoursAwake >= 14) alerts.push(`<span class="text-[10px] bg-purple-900/80 text-purple-200 px-2 py-0.5 rounded-md border border-purple-500">🥱 Thức khuya (${state.hoursAwake}h)</span>`);
+            const alertBox = document.getElementById('ui-status-alerts');
+            if (alerts.length > 0) {
+                alertBox.innerHTML = alerts.join('');
+                alertBox.classList.remove('hidden');
+            } else {
+                alertBox.classList.add('hidden');
+            }
+
+            // Cần cắm bờ tại vị trí hiện tại
+            const hereLines = state.setLines.filter(sl => sl.locId === state.locationId);
+            const setLineBar = document.getElementById('ui-setline-bar');
+            if (hereLines.length > 0) {
+                const readyCnt = hereLines.filter(sl => sl.timeLeft <= 0).length;
+                document.getElementById('ui-setline-text').textContent = readyCnt > 0
+                    ? `🚩 Có ${readyCnt}/${hereLines.length} cần cắm bờ đã dính cá!`
+                    : `🚩 Đang cắm ${hereLines.length} cần cắm bờ tại đây...`;
+                setLineBar.classList.remove('hidden');
+            } else {
+                setLineBar.classList.add('hidden');
+            }
+        }
+
+        function stopAllActiveScenes() {
+            if (soakInterval) clearInterval(soakInterval);
+            if (combatInterval) clearInterval(combatInterval);
+            if (mgInterval) clearInterval(mgInterval);
+            soakInterval = combatInterval = mgInterval = null;
+            soakData.active = combatData.active = mgData.active = false;
+            document.getElementById('soaking-panel').classList.add('hidden');
+            document.getElementById('fishing-combat-panel').classList.add('hidden');
+            document.getElementById('minigame-panel').classList.add('hidden');
+        }
+
+        function saveGame() {
+            try {
+                localStorage.setItem('can_thu_du_ky_save', JSON.stringify(state));
+            } catch (e) {}
+        }
+
+        function loadGame() {
+            try {
+                const raw = localStorage.getItem('can_thu_du_ky_save');
+                if (raw) {
+                    const parsed = JSON.parse(raw);
+                    state = { ...JSON.parse(JSON.stringify(DEFAULT_STATE)), ...parsed };
+                }
+            } catch (e) {}
+        }
+
+        window.onload = function () {
+            loadGame();
+            if (state.logs.length === 0) {
+                addLog('🌅 Chào mừng bạn đến với Cần Thủ Du Ký! Hãy mở Bản Đồ đi tới Rừng Tre chặt cây, ra Ruộng Lúa đào giun rồi chế tạo bộ cần câu đầu tiên!', 'text-emerald-300 font-bold');
+            } else {
+                renderLogs();
+            }
+            updateUI();
+        };
+    </script>
+</body>
+</html>
